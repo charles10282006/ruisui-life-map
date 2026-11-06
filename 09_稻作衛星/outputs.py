@@ -7,7 +7,29 @@ from PIL import Image, ImageDraw, ImageFont
 # NDVI 色階（值為 NDVI）
 STOPS = [(-0.1, (161, 136, 127)), (0.1, (190, 160, 120)), (0.25, (236, 205, 120)),
          (0.4, (200, 220, 110)), (0.6, (110, 190, 74)), (0.8, (27, 127, 59)), (0.95, (8, 70, 34))]
-AMP_MIN = 35      # 田區候選：過去12個月 NDVI(×100) p90-p10 振幅 >= 35
+WC_URL = ("https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/"
+          "ESA_WorldCover_10m_2021_v200_N21E120_Map.tif")
+
+
+def cropland_mask(shape, transform, DATA):
+    """ESA WorldCover 2021 耕地(class 40)，重投影到本專案 10m 網格；第一次下載後存快取。"""
+    p = os.path.join(DATA, "worldcover_cropland.npy")
+    if os.path.exists(p):
+        m = np.load(p)
+        if m.shape == tuple(shape):
+            return m
+    import rasterio
+    from rasterio.vrt import WarpedVRT
+    from rasterio.enums import Resampling
+    H, W = shape
+    with rasterio.open(WC_URL) as ds, WarpedVRT(ds, crs="EPSG:32651", transform=transform, width=W, height=H,
+                                                 resampling=Resampling.nearest) as vrt:
+        m = vrt.read(1) == 40
+    np.save(p, m)
+    return m
+
+
+AMP_MIN = 30      # 田區：WorldCover 耕地內，過去12個月 NDVI(×100) p90-p10 振幅 >= 30
 PEAK_MIN = 55     # 且 p90 >= 55（旺季夠綠）
 MIN_OBS = 8       # 至少 8 次有效觀測
 VILL_MIN_FRAC = 0.25  # 某村該日期有效的田區候選像元比例 < 25% 就不畫點
@@ -60,7 +82,10 @@ def build(vill, bounds, shape, transform, lab, ordered, CACHE, OVER, DATA, HERE)
         with np.errstate(all="ignore"):
             q = np.nanpercentile(blk, [10, 90], axis=0)
         p10[r0:r0 + 200], p90[r0:r0 + 200] = q[0], q[1]
-    farm = mask_town & (nobs >= MIN_OBS) & ((p90 - p10) >= AMP_MIN) & (p90 >= PEAK_MIN)
+    crop = cropland_mask(shape, transform, DATA)
+    farm = mask_town & crop & (nobs >= MIN_OBS) & ((p90 - p10) >= AMP_MIN) & (p90 >= PEAK_MIN)
+    wc_px = int((mask_town & crop).sum())
+    print("WorldCover 耕地像元", wc_px, "；入選", int(farm.sum()))
     del stack
     print("田區候選像元", int(farm.sum()), "占鄉域", round(farm.sum() / mask_town.sum() * 100, 1), "%")
 
@@ -160,7 +185,7 @@ def build(vill, bounds, shape, transform, lab, ordered, CACHE, OVER, DATA, HERE)
                "scenes": all_scenes, "series": series, "cards": cards,
                "params": {"amp_min": AMP_MIN, "peak_min": PEAK_MIN, "min_obs": MIN_OBS,
                           "vill_min_frac": VILL_MIN_FRAC, "min_valid": 0.5,
-                          "farm_px": int(farm.sum()), "town_px": int(mask_town.sum()),
+                          "wc_crop_px": wc_px, "farm_px": int(farm.sum()), "town_px": int(mask_town.sum()),
                           "n_year_obs": len(y1)},
                "latest": usable[-1]["date"]}
     with open(os.path.join(DATA, "data.js"), "w", encoding="utf-8") as f:

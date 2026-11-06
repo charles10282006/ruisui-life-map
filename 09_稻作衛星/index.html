@@ -74,15 +74,17 @@ footer p{margin:6px 0}
 <p><b>影像來源</b>：Element84 Earth Search（AWS 上的 STAC 目錄）Sentinel-2 L2A。免金鑰、資料為 Cloud-Optimized GeoTIFF，只讀瑞穗範圍的裁切，不用下載整張。</p>
 <p><b>雲遮罩</b>：用 L2A 的 SCL 場景分類，只保留「植被、裸地、水」三類像元；雲、雲影、卷雲、飽和、無資料都排除。瑞穗村界內可用像元比例 &lt; 50% 的日期整張略過（見上方紀錄）。同日兩個圖幅(51QUF、51QUG)會合併。</p>
 <p><b>NDVI</b> = (近紅外 B08 − 紅光 B04) ÷ (B08 + B04)，10 公尺解析度，已扣除 L2A 的反射率偏移。</p>
-<p><b>田區範圍</b>：我找過 data.gov.tw，國土利用調查農業使用土地只查到「鄉鎮市區面積統計表」，沒有找到可直接下載的田區圖層（查不到不代表不存在）。因此改用簡易分類：<b>過去 12 個月內，NDVI 的 90 百分位 − 10 百分位 ≥ 0.35，且 90 百分位 ≥ 0.55，並至少有 8 次有效觀測</b>的像元，稱為「田區候選」。</p>
-<p><b>限制</b>：(1) 這個規則抓的是「綠度有明顯季節起伏」的地方，稻田符合，但休耕輪作、旱作、河灘草地也可能被納入；(2) 文旦、柚子等果樹四季常綠、起伏小，<b>多半不會被選進田區候選</b>，所以本頁無法單獨呈現文旦園，只能看各村整體綠度（時間序列的虛線）；(3) 未做地籍或作物別查核，村與村之間比較只供大略參考；(4) 10 公尺像元無法分辨小田埂。</p>
-<p>田區候選參數：振幅 ≥ <span id="pa"></span>，旺季 ≥ <span id="pp"></span>，共 <span id="pf"></span> 像元（約 <span id="ph"></span> 公頃，占瑞穗鄉 11 村面積 <span id="pr"></span>%）。</p>
+<p><b>田區範圍</b>：我找過 data.gov.tw，國土利用調查農業使用土地只查到「鄉鎮市區面積統計表」，沒有找到可直接下載的田區圖層（查不到不代表不存在）。因此改用兩步驟的簡易分類：(1) 先取 ESA WorldCover 2021 的「耕地」像元（10 公尺，免金鑰）；(2) 再要求<b>過去 12 個月 NDVI 的 90 百分位 − 10 百分位 ≥ 0.30，且 90 百分位 ≥ 0.55，並至少有 8 次有效觀測</b>。同時符合者稱為「田區候選」。</p>
+<p><b>為什麼不只用 NDVI 起伏</b>：我用 WorldCover 對照過，只靠 NDVI 起伏選出的像元約六成落在樹冠（林地），不適合當田區。</p>
+<p><b>限制</b>：(1) WorldCover 是 2021 年的機器分類，有誤差，2021 年後新增或轉作的田不會被納入，也可能包含休耕地；(2) 文旦、柚子等果樹多被歸為「樹冠」且四季常綠，<b>不會被選進田區候選</b>，本頁無法單獨呈現文旦園，只能看各村整體綠度（時間序列的虛線，含林地）；(3) 未做地籍或作物別查核，村與村之間比較只供大略參考；(4) 10 公尺像元無法分辨小田埂。</p>
+<p>田區候選參數：振幅 ≥ <span id="pa"></span>，旺季 ≥ <span id="pp"></span>。WorldCover 耕地共 <span id="pw"></span> 公頃，其中入選 <span id="pf"></span> 像元（約 <span id="ph"></span> 公頃，占瑞穗鄉 11 村面積 <span id="pr"></span>%）。</p>
 </div>
 
 <footer>
 <p><b>出處</b></p>
 <p>Contains modified Copernicus Sentinel data <span id="yrs"></span>. Sentinel-2 L2A 由 ESA / Copernicus 提供。</p>
 <p>影像目錄（STAC）：Element84 Earth Search，sentinel-2-l2a 集合，資料存放於 AWS Open Data「Sentinel-2 Cloud-Optimized GeoTIFFs」(sentinel-cogs)。</p>
+<p>耕地範圍：ESA WorldCover 10 m 2021 v200 © ESA WorldCover project / Contains modified Copernicus Sentinel data (2020–2021) processed by ESA WorldCover consortium，CC BY 4.0。</p>
 <p>村界：國土測繪中心（NLSC）村(里)界 1150817 版。底圖：© OpenStreetMap contributors。地圖元件：Leaflet。</p>
 <p>此頁為個人整理的資料視覺化，非官方資訊；影像日期以頁面標示為準。</p>
 </footer>
@@ -148,7 +150,7 @@ function log(){
   $('cloudsum').innerHTML=`<p style="margin:0">近 24 個月 STAC 共找到 <b>${all.length}</b> 個拍攝日期；雲遮罩後瑞穗可用比例 ≥ 50% 的有 <b>${u.length}</b> 個，<b>${sk}</b> 個因雲太多略過（${Math.round(sk/all.length*100)}%）。最近一張可用影像：<b>${D.latest}</b>。</p>`;
   $('scenetbl').innerHTML='<table><tr><th>日期</th><th>可用比例</th><th>整幅雲量%</th><th>狀態</th></tr>'+[...all].reverse().map(s=>`<tr><td>${s.date}</td><td>${Math.round(s.valid_frac*100)}%</td><td>${s.stac_cloud_pct.map(x=>x==null?'?':x).join('/')}</td><td>${s.usable?'使用':'略過'}</td></tr>`).join('')+'</table>';
   const p=D.params; $('pa').textContent=(p.amp_min/100).toFixed(2);$('pp').textContent=(p.peak_min/100).toFixed(2);
-  $('pf').textContent=p.farm_px.toLocaleString();$('ph').textContent=Math.round(p.farm_px/100).toLocaleString();$('pr').textContent=(p.farm_px/p.town_px*100).toFixed(1);
+  $('pw').textContent=Math.round(p.wc_crop_px/100).toLocaleString();$('pf').textContent=p.farm_px.toLocaleString();$('ph').textContent=Math.round(p.farm_px/100).toLocaleString();$('pr').textContent=(p.farm_px/p.town_px*100).toFixed(1);
   const ys=[...new Set(all.map(s=>s.date.slice(0,4)))];$('yrs').textContent='['+ys.join(', ')+']';
   $('upd').textContent='最近一張影像 '+D.latest+'；頁面資料更新於 '+D.updated;
 }
