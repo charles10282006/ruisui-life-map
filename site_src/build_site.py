@@ -44,6 +44,19 @@ BACK_BTN = """
 """
 
 
+# 地圖右下角的出處小字在手機上會蓋住地圖：隱藏地圖上的那行，改把同樣的文字放到頁面最底下（出處仍保留）
+MAP_CREDIT = """
+<style>.leaflet-control-attribution{display:none!important}
+.rs-credit{margin:0;padding:14px 16px calc(64px + env(safe-area-inset-bottom));text-align:center;
+ font:12px/1.6 system-ui,'Microsoft JhengHei',sans-serif;color:#7a8580;background:transparent}
+.rs-credit a{color:inherit}</style>
+<script>(function(){function go(){var a=document.querySelector('.leaflet-control-attribution');
+if(!a||!a.textContent.trim()){return setTimeout(go,500);}var p=document.createElement('p');p.className='rs-credit';
+p.innerHTML='地圖：'+a.innerHTML;document.body.appendChild(p);}
+if(document.readyState==='complete')go();else addEventListener('load',go);})();</script>
+"""
+
+
 def copy_page(p):
     src = ROOT / p["src"]
     dst = OUT / p["slug"]
@@ -65,6 +78,8 @@ def patch_html(path, slug):
     s = path.read_text(encoding="utf-8")
     if "rs-home" not in s:
         s = s.replace("</body>", BACK_BTN + "</body>", 1) if "</body>" in s else s + BACK_BTN
+    if "leaflet" in s.lower() and "rs-credit" not in s:
+        s = s.replace("</body>", MAP_CREDIT + "</body>", 1) if "</body>" in s else s + MAP_CREDIT
     if slug == "terrain":  # 把 #10 的佔位卡換成連結
         links = {"#7 生活可近性": ("../care/", "就醫地圖：診所、急診、AED、交通"),
                  "#8 通學距離": ("../school/", "各村到學校的距離與時間"),

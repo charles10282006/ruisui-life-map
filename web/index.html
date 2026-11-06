@@ -71,6 +71,19 @@ main{display:grid;grid-template-columns:1fr;gap:0}
 .seg button[aria-pressed="true"]{border:2px solid var(--accent);font-weight:700}
 label.f{display:block;margin:10px 0 4px;font-weight:700}
 select,input[type=time],input[type=date]{width:100%;min-height:48px;font-size:1rem;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.card{cursor:pointer}
+.card.open{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.detail{margin-top:8px}
+.hgrid{border-collapse:collapse;margin:6px 0 2px;font-size:.82rem;width:100%;max-width:300px}
+.hgrid th,.hgrid td{border:1px solid var(--line);padding:2px 0;text-align:center;font-weight:600}
+.hgrid th{background:var(--muted-bg,#eef1ee);color:var(--ink2)}
+.hgrid td.on{color:var(--accent);font-weight:800}
+.hgrid td.off{color:#b5bcb8}
+.hgrid .hi{outline:2px solid var(--accent);outline-offset:-2px}
+.btns{display:flex;gap:8px;margin:8px 0 4px;flex-wrap:wrap}
+.btns .btn{display:inline-block;padding:6px 12px;border-radius:999px;border:1.5px solid var(--accent);color:var(--accent);text-decoration:none;font-weight:700;font-size:.9rem;background:var(--panel)}
+.leaflet-popup-content{max-height:55vh;overflow:auto}
+.dest-card{cursor:default}
 .trip{border-left:6px solid var(--accent);padding-left:10px;margin:10px 0}
 .trip .big{font-size:1.2rem;font-weight:800}
 .small{font-size:.82rem;color:var(--ink2)}
@@ -103,10 +116,10 @@ footer{padding:16px;color:var(--ink2);font-size:.85rem}
     <!-- 查我家附近 -->
     <div data-pane="near">
       <h2>離你最近的醫療資源</h2>
-      <p class="hint">在地圖上點一下你家的位置，或按下方按鈕用手機定位（位置只在你的手機上計算，不會上傳）。</p>
+      <p class="hint">點地圖選你家，或用手機定位。</p>
       <button class="btn" id="locate">📍 用我現在的位置</button>
       <div class="seg" role="group" aria-label="道路顏色">
-        <span class="hint" style="align-self:center">道路顏色代表開車到最近的：</span>
+        <span class="hint" style="align-self:center">道路顏色＝開車到最近的：</span>
         <button data-road="clinic" aria-pressed="true">診所</button>
         <button data-road="er" aria-pressed="false">急診</button>
         <button data-road="aed" aria-pressed="false">AED</button>
@@ -118,7 +131,7 @@ footer{padding:16px;color:var(--ink2);font-size:.85rem}
     <!-- 現在有開 -->
     <div data-pane="open" hidden>
       <h2 id="openTitle">現在有看診的院所</h2>
-      <p class="hint">依健保署登錄的固定看診時段（上午／下午／晚上），院所可能臨時休診，<b>出門前請先打電話確認</b>。</p>
+      <p class="hint">可能臨時休診，<b>出門前先打電話</b>。</p>
       <div class="seg" role="group" aria-label="時段">
         <button data-sess="auto" aria-pressed="true">現在</button>
         <button data-sess="0" aria-pressed="false">今天上午</button>
@@ -130,7 +143,7 @@ footer{padding:16px;color:var(--ink2);font-size:.85rem}
     <!-- 坐車去看病 -->
     <div data-pane="ride" hidden>
       <h2>坐火車、客運去看病</h2>
-      <p class="hint">先在「查我家附近」選好你家位置，會算進走路到車站的時間；沒選的話從瑞穗車站出發。</p>
+      <p class="hint">沒選位置時，從瑞穗車站出發。</p>
       <label class="f" for="dest">要去哪裡看病？</label>
       <select id="dest"></select>
       <label class="f" for="rideDate">哪一天？</label>
@@ -244,6 +257,66 @@ function openTag(f, o){
              : (o?"現在時段有看診":"現在時段休診");
   return `<span class="tag ${o?"open":"closed"}">${what}</span>`;
 }
+// 一週固定看診時段表（健保署登錄）；hiWd = 要標亮的星期（0=週一）
+function hoursGrid(f, hiWd){
+  if(!f.hours || f.hours.length!==21) return "";
+  const head = WD.map((w,i)=>`<th class="${i===hiWd?"hi":""}">${w}</th>`).join("");
+  const body = SESS.map((s,si)=>`<tr><th>${s}</th>` + WD.map((w,di)=>{
+    const on = f.hours[si*7+di]==="N";
+    return `<td class="${on?"on":"off"} ${di===hiWd?"hi":""}">${on?"●":"–"}</td>`;
+  }).join("") + `</tr>`).join("");
+  return `<table class="hgrid" aria-label="一週看診時段"><tr><th></th>${head}</tr>${body}</table>`
+    + ``;
+}
+function navUrl(f){ return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(f.addr || `${f.lat},${f.lon}`); }
+// 院所詳細資訊：用在地圖小視窗、點開的列表卡片、坐車去看病的結果
+function facDetail(f, hiWd){
+  if(hiWd===undefined) hiWd = wdIdx(new Date());
+  let h = "";
+  if(f.dept) h += `<div class="small">科別：${esc(f.dept.replace(/,/g,"、"))}</div>`;
+  h += hoursGrid(f, hiWd);
+  if(f.note && f.note!=="-") h += `<div class="small">看診備註：${esc(f.note)}</div>`;
+  const btns = [];
+  if(f.tel) btns.push(`<a class="btn" href="tel:${esc(f.tel.replace(/[^\d#]/g,""))}">📞 打電話</a>`);
+  if(f.addr) btns.push(`<a class="btn" href="${navUrl(f)}" target="_blank" rel="noopener">🧭 導航</a>`);
+  if(btns.length) h += `<div class="btns">${btns.join("")}</div>`;
+  if(f.precision && f.precision!=="exact") h += `<div class="small">位置約略，導航以地址為準</div>`;
+  return h;
+}
+// 地圖只顯示目前選的項目：查我家附近＝所選的類別；現在有開＝院所與藥局；坐車去看病＝車站、站牌與目的地
+const MED = ["clinic","er","hospital","dental","tcm","pharmacy"];
+function visibleCats(){
+  const t = currentTab();
+  if(t==="near") return S.roadCat==="er" ? ["er"] : [S.roadCat];
+  if(t==="open") return MED;
+  if(t==="ride") return ["station","bus"];
+  return null; // 資料與說明：全部顯示
+}
+function updateMarkers(){
+  const cats = visibleCats(), dest = currentTab()==="ride" ? document.getElementById("dest")?.value : null;
+  for(const f of S.fac){
+    const m = S.markers[f.id]; if(!m) continue;
+    const show = !cats || cats.includes(facCat(f)) || f.id===dest || f.id===S.focusId;
+    if(show && !facLayer.hasLayer(m)) facLayer.addLayer(m);
+    if(!show && facLayer.hasLayer(m)) facLayer.removeLayer(m);
+  }
+}
+function focusFac(id, card){
+  const f=S.byId[id]; if(!f) return;
+  S.focusId = id; updateMarkers();
+  if(window.innerWidth<900) document.getElementById("map").scrollIntoView({behavior:"smooth"});
+  map.invalidateSize();
+  map.setView([f.lat,f.lon], 16, {animate:false}); S.markers[f.id]?.openPopup();
+  if(card){
+    const wasOpen = card.classList.contains("open");
+    card.parentElement.querySelectorAll(".card.open").forEach(c=>{ c.classList.remove("open"); c.querySelector(".detail")?.remove(); });
+    if(!wasOpen && ["clinic","hospital","dental","tcm","pharmacy"].includes(f.cat)){
+      card.classList.add("open");
+      card.insertAdjacentHTML("beforeend", `<div class="detail">${facDetail(f)}</div>`);
+      card.querySelectorAll(".detail a").forEach(a=>a.addEventListener("click", e=>e.stopPropagation()));
+    }
+  }
+}
 function facPopup(f){
   const d=new Date(), wd=wdIdx(d), ss=nowSess();
   let h = `<b>${esc(f.name)}</b><br><span class="small">${esc(CAT[facCat(f)]?.label||"")}</span>`;
@@ -252,10 +325,12 @@ function facPopup(f){
   if(f.tel) h += `<br>📞 <a href="tel:${esc(f.tel.replace(/[^\d#]/g,""))}">${esc(f.tel)}</a>`;
   const o = isOpen(f, wd, ss);
   if(o!==null) h += `<br>${openTag(f, o)}`;
-  if(f.note) h += `<br><span class="small">備註：${esc(f.note)}</span>`;
+  if(f.note && !["clinic","hospital","dental","tcm","pharmacy"].includes(f.cat)) h += `<br><span class="small">備註：${esc(f.note)}</span>`;
   if(f.cat==="aed"){ const a=aedOpenNow(f); if(a!==null) h+=`<br>${a?'<span class="tag open">現在可使用</span>':'<span class="tag closed">現在非開放時間</span>'}`; }
-  if(f.precision && f.precision!=="exact") h += `<br><span class="tag warn">約略位置</span><span class="small">請以地址為準</span>`;
   if(f.routes) h += `<br>路線：${f.routes.map(esc).join("、")}`;
+  if(["clinic","hospital","dental","tcm","pharmacy"].includes(f.cat)){
+    h += `<div class="detail">${facDetail(f, wd)}</div>`;
+  } else if(f.precision && f.precision!=="exact") h += `<br><span class="tag warn">約略位置</span><span class="small">請以地址為準</span>`;
   return h;
 }
 function drawFacilities(){
@@ -263,9 +338,10 @@ function drawFacilities(){
   for(const f of S.fac){
     if(f.cat==="bus" && !S.ruisuiStops.has(f.id)) continue;
     const m = L.marker([f.lat,f.lon], {icon:pinIcon(facCat(f)), title:f.name, zIndexOffset: f.cat==="bus"?-100:0});
-    m.bindPopup(() => facPopup(f));
+    m.bindPopup(() => facPopup(f), {maxWidth:300, autoPanPadding:[16,16]});
     m.addTo(facLayer); S.markers[f.id] = m;
   }
+  updateMarkers();
 }
 function drawRoads(){
   roadLayer.clearLayers();
@@ -303,7 +379,7 @@ function pick(lat, lon){
   const box = document.getElementById("nearResult");
   if(!p || dist>3000){
     S.picked=null;
-    box.innerHTML = `<p class="tag warn">這個位置不在瑞穗鄉的計算範圍內</p><p class="hint">目前只計算瑞穗鄉境內的道路。</p>`;
+    box.innerHTML = `<p class="tag warn">這個位置不在瑞穗鄉的計算範圍內</p>`;
     return;
   }
   S.picked = {lat, lon, p};
@@ -329,10 +405,9 @@ function pick(lat, lon){
     section("診所・衛生所","clinic") + section("急診","er") + section("AED","aed") +
     section("健保藥局","pharmacy") + section("火車站","station","走路") + section("客運站牌","bus","走路") +
     `<p class="small">開車時間為估計值，不含紅綠燈與停車。</p>`;
-  box.querySelectorAll(".card").forEach(el=>el.addEventListener("click",()=>{
-    const f=S.byId[el.dataset.id]; if(!f) return;
-    map.setView([f.lat,f.lon], 15); S.markers[f.id]?.openPopup();
-    if(window.innerWidth<900) document.getElementById("map").scrollIntoView({behavior:"smooth"});
+  box.querySelectorAll(".card").forEach(el=>el.addEventListener("click",e=>{
+    if(e.target.closest("a")) return;
+    focusFac(el.dataset.id, el);
   }));
 }
 map.on("click", e => { if(currentTab()==="near") pick(e.latlng.lat, e.latlng.lng); });
@@ -344,9 +419,9 @@ document.getElementById("locate").addEventListener("click", ()=>{
     {enableHighAccuracy:true, timeout:10000});
 });
 document.querySelectorAll("[data-road]").forEach(b=>b.addEventListener("click",()=>{
-  S.roadCat=b.dataset.road;
+  S.roadCat=b.dataset.road; S.focusId=null;
   document.querySelectorAll("[data-road]").forEach(x=>x.setAttribute("aria-pressed", x===b));
-  drawRoads();
+  drawRoads(); updateMarkers();
 }));
 
 // ---------- 現在有開 ----------
@@ -370,8 +445,9 @@ function renderOpen(){
       <div class="sub">${esc(f.addr)}${f.tel?` ・ <a href="tel:${esc(f.tel.replace(/[^\d#]/g,""))}">${esc(f.tel)}</a>`:""}</div>
       ${f.note?`<div class="small">備註：${esc(f.note)}</div>`:""}</div>`).join("")
   ).join("") || `<p class="hint">這個時段沒有登錄看診的院所。</p>`;
-  document.querySelectorAll("#openList .card").forEach(el=>el.addEventListener("click",()=>{
-    const f=S.byId[el.dataset.id]; map.setView([f.lat,f.lon],15); S.markers[f.id]?.openPopup();
+  document.querySelectorAll("#openList .card").forEach(el=>el.addEventListener("click",e=>{
+    if(e.target.closest("a")) return;
+    focusFac(el.dataset.id, el);
   }));
 }
 document.querySelectorAll("[data-sess]").forEach(b=>b.addEventListener("click",()=>{
@@ -392,6 +468,9 @@ function setupRide(){
   sel.innerHTML = Object.keys(byTown).sort((a,b)=>(order.indexOf(a)+1||99)-(order.indexOf(b)+1||99)).map(t =>
     `<optgroup label="${esc(t)}">` + byTown[t].sort((a,b)=>(b.cat==="hospital")-(a.cat==="hospital")).map(f=>
       `<option value="${esc(f.id)}">${esc(f.name.replace(/^.*醫療財團法人/,""))}${f.er?"（有急診）":""}</option>`).join("") + "</optgroup>").join("");
+  // 預設選玉里最近、有急診的綜合醫院（玉里慈濟），沒有就選第一家有急診的
+  const def = dests.find(f=>f.er && f.name.includes("玉里慈濟")) || dests.find(f=>f.er);
+  if(def) sel.value = def.id;
   const ds = document.getElementById("rideDate");
   const days = T.rail ? Object.keys(T.rail.days) : [];
   const base = new Date();
@@ -484,10 +563,15 @@ function planRide(){
   }
   if(!S.picked) out.unshift(`<p class="tag warn">還沒選你家的位置，以下從瑞穗車站附近出發計算</p>`);
   const o=isOpen(f, wd, 0), o2=isOpen(f, wd, 1);
-  if(o!==null) out.unshift(`<p>${esc(f.name)} 星期${WD[wd]}：上午${o?'<span class="tag open">有看診</span>':'<span class="tag closed">休診</span>'} 下午${o2?'<span class="tag open">有看診</span>':'<span class="tag closed">休診</span>'}</p>`);
+  const dayLine = o!==null ? `<div>星期${WD[wd]}：上午${o?'<span class="tag open">有看診</span>':'<span class="tag closed">休診</span>'} 下午${o2?'<span class="tag open">有看診</span>':'<span class="tag closed">休診</span>'}</div>` : "";
+  out.unshift(`<div class="card open dest-card"><div class="name">${esc(f.name)}</div>
+    <div class="sub">${esc(CAT[facCat(f)]?.label||"")}${f.addr?` ・ ${esc(f.addr)}`:""}</div>${dayLine}
+    <div class="detail">${facDetail(f, wd)}</div></div>`);
   document.getElementById("rideResult").innerHTML = out.join("");
+  updateMarkers(); map.setView([f.lat,f.lon], 14); S.markers[f.id]?.openPopup();
 }
 document.getElementById("plan").addEventListener("click", planRide);
+document.getElementById("dest").addEventListener("change", updateMarkers);
 
 // ---------- 分頁 ----------
 function currentTab(){ return document.querySelector('[role=tab][aria-selected="true"]').dataset.tab; }
@@ -498,7 +582,16 @@ document.querySelectorAll("[role=tab]").forEach(b=>b.addEventListener("click",()
   if(t==="near"){ map.addLayer(roadLayer); } else { map.removeLayer(roadLayer); }
   renderOpen();
   if(t==="ride" && S.picked){ /* 保留已選位置 */ }
+  S.focusId=null; map.closePopup(); updateMarkers();
+  setTimeout(()=>refitMap(false), 50);
 }));
+
+// 手機切換分頁或旋轉螢幕時版面高度會變，Leaflet 要重算大小；若畫面已離開瑞穗就拉回來
+function refitMap(force){
+  map.invalidateSize();
+  if(S.vb && (force || !map.getBounds().intersects(S.vb))) map.fitBounds(S.vb, {padding:[10,10]});
+}
+window.addEventListener("resize", ()=>refitMap(false));
 
 // ---------- 載入 ----------
 Promise.all(["facilities","access","roads","villages","transit"].map(n=>fetch(`data/${n}.json`).then(r=>r.json())))
@@ -509,10 +602,14 @@ Promise.all(["facilities","access","roads","villages","transit"].map(n=>fetch(`d
   const ci = acc.cats.indexOf("bus");
   for(const p of acc.points) for(const [id] of (p[2+ci]||[])) S.ruisuiStops.add(id);
   const hu = fac.meta.hours_updated || "";
-  document.getElementById("updated").textContent =
-    `看診時段更新：${hu.slice(0,4)}-${hu.slice(4,6)}-${hu.slice(6,8)}・火車時刻更新：${tr.built}・路網計算：${acc.built}`;
+  const dates = [["看診時段",`${hu.slice(0,4)}-${hu.slice(4,6)}-${hu.slice(6,8)}`],["火車時刻",tr.built],["路網計算",acc.built]];
+  document.getElementById("updated").textContent = new Set(dates.map(d=>d[1])).size===1
+    ? `資料更新：${dates[0][1]}`
+    : dates.map(([k,v])=>`${k}：${v}`).join("・");
   drawVillages(); drawRoads(); drawFacilities(); setupRide(); renderOpen();
-  map.fitBounds(L.geoJSON(vil).getBounds(), {padding:[10,10]});
+  S.vb = L.geoJSON(vil).getBounds();
+  map.setMaxBounds(S.vb.pad(0.8));
+  refitMap(true); setTimeout(()=>refitMap(true), 400);
 }).catch(e=>{
   document.getElementById("updated").textContent = "資料載入失敗，請稍後再試。";
   console.error(e);
