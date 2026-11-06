@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#faf8f3;--card:#fff;--ink:#222;--sub:#5b5b5b;--line:#e3dfd3;--accent:#2f6f4f;--c1:#d9822b;--c2:#2a6fb0;--c3:#7a4fa3}
-@media (prefers-color-scheme:dark){:root{--bg:#161814;--card:#20231e;--ink:#eee;--sub:#aab;--line:#3a3e36;--accent:#7bc99a;--c1:#f0a35a;--c2:#6aaee8;--c3:#b995e0}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.6 "Noto Sans TC","Microsoft JhengHei",sans-serif}
 header{padding:14px 16px 6px}
@@ -59,7 +58,7 @@ const LV = ["國小","國中","高中職"];
 const COL = {"國小":"#d9822b","國中":"#2a6fb0","高中職":"#7a4fa3"};
 const S = Object.fromEntries(D.schools.map(s=>[s.key,s]));
 const map = L.map('map',{zoomControl:true}).setView([23.50,121.37],11);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(map);
+L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}',{maxZoom:18,attribution:'底圖：© 內政部國土測繪中心 臺灣通用電子地圖｜路網：© OpenStreetMap contributors'}).addTo(map);
 const vl = {};
 let cur = null, pin = null;
 const esc = t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
