@@ -85,7 +85,7 @@ def build_home(pages):
         cards.append(
             f'<a class="link" href="{href}"><span class="ic" aria-hidden="true">{p["icon"]}</span>'
             f'<span class="tx"><b>{html.escape(p["title"])}</b><small>{html.escape(p["desc"])}</small>'
-            f'<em>{html.escape(p["update"])}</em></span><span class="go" aria-hidden="true">›</span></a>')
+            f'</span><span class="go" aria-hidden="true">›</span></a>')  # 更新頻率標籤依使用者要求不顯示
     tpl = (SRC / "home.html").read_text(encoding="utf-8")
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
     return tpl.replace("{{CARDS}}", "\n".join(cards)).replace("{{BUILT}}", now)
