@@ -57,6 +57,12 @@ if(document.readyState==='complete')go();else addEventListener('load',go);})();<
 """
 
 
+# 手機（尤其 Instagram 內建瀏覽器）會自動放大文字；關掉自動放大，內文統一 16px
+TEXT_FIX = """<style>html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{font-size:16px!important}</style>
+"""
+
+
 def copy_page(p):
     src = ROOT / p["src"]
     dst = OUT / p["slug"]
@@ -78,6 +84,8 @@ def patch_html(path, slug):
     s = path.read_text(encoding="utf-8")
     if "rs-home" not in s:
         s = s.replace("</body>", BACK_BTN + "</body>", 1) if "</body>" in s else s + BACK_BTN
+    if "text-size-adjust:100%;text-size-adjust" not in s:
+        s = s.replace("</head>", TEXT_FIX + "</head>", 1)
     if "leaflet" in s.lower() and "rs-credit" not in s:
         s = s.replace("</body>", MAP_CREDIT + "</body>", 1) if "</body>" in s else s + MAP_CREDIT
     if slug == "terrain":  # 把 #10 的佔位卡換成連結
@@ -101,7 +109,7 @@ def build_home(pages):
             f'<a class="link" href="{href}"><span class="ic" aria-hidden="true">{p["icon"]}</span>'
             f'<span class="tx"><b>{html.escape(p["title"])}</b><small>{html.escape(p["desc"])}</small>'
             f'</span><span class="go" aria-hidden="true">›</span></a>')  # 更新頻率標籤依使用者要求不顯示
-    tpl = (SRC / "home.html").read_text(encoding="utf-8")
+    tpl = (SRC / "home.html").read_text(encoding="utf-8").replace("</head>", TEXT_FIX + "</head>", 1)
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
     return tpl.replace("{{CARDS}}", "\n".join(cards)).replace("{{BUILT}}", now)
 
