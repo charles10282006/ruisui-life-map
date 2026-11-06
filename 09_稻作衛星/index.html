@@ -6,8 +6,8 @@
 <title>瑞穗生活地圖 #9 稻作衛星</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <style>
-:root{--bg:#f6f5f0;--card:#fff;--ink:#1f2a1f;--sub:#5b665b;--line:#dcdcd2;--g:#2e7d32;--warn:#fff3cd;--warnb:#e0b94a}
-@media (prefers-color-scheme:dark){:root{--bg:#161a16;--card:#1f261f;--ink:#e8ece6;--sub:#a3ada2;--line:#34403a;--g:#7bc47f;--warn:#3b3318;--warnb:#8a6d1a}}
+:root{--bg:#fbfaf6;--card:#fff;--ink:#1f2a1f;--sub:#5b665b;--line:#e3e3d9;--g:#2e7d32;--warn:#fff3cd;--warnb:#e0b94a}
+:root{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif}
 main{max-width:760px;margin:0 auto;padding:0 16px 40px}
@@ -85,7 +85,7 @@ footer p{margin:6px 0}
 <p>Contains modified Copernicus Sentinel data <span id="yrs"></span>. Sentinel-2 L2A 由 ESA / Copernicus 提供。</p>
 <p>影像目錄（STAC）：Element84 Earth Search，sentinel-2-l2a 集合，資料存放於 AWS Open Data「Sentinel-2 Cloud-Optimized GeoTIFFs」(sentinel-cogs)。</p>
 <p>耕地範圍：ESA WorldCover 10 m 2021 v200 © ESA WorldCover project / Contains modified Copernicus Sentinel data (2020–2021) processed by ESA WorldCover consortium，CC BY 4.0。</p>
-<p>村界：國土測繪中心（NLSC）村(里)界 1150817 版。底圖：© OpenStreetMap contributors。地圖元件：Leaflet。</p>
+<p>村界：國土測繪中心（NLSC）村(里)界 1150817 版。底圖：內政部國土測繪中心 臺灣通用電子地圖（WMTS）。地圖元件：Leaflet。</p>
 <p>此頁為個人整理的資料視覺化，非官方資訊；影像日期以頁面標示為準。</p>
 </footer>
 </main>
@@ -95,7 +95,7 @@ footer p{margin:6px 0}
 const D=window.DATA, $=id=>document.getElementById(id);
 const usable=D.scenes.filter(s=>s.usable&&s.overlay);
 const map=L.map('map',{zoomControl:true,attributionControl:true}).fitBounds(D.bounds);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap contributors'}).addTo(map);
+L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}',{maxZoom:18,attribution:'底圖：© 內政部國土測繪中心 臺灣通用電子地圖'}).addTo(map);
 let ov=null, sel=null;
 const names=D.villages.features.map(f=>f.properties.VILLNAME);
 sel=names.includes('富源村')?'富源村':names[0];

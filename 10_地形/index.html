@@ -256,9 +256,26 @@ function dot(svg,x,y,c,r){const u=U(svg);el('circle',{cx:x,cy:y,r:(r||6)*u,fill:
 const L=D.local, ml=$('#mapLocal');
 baseMap(ml,'assets/hill_local.jpg',L.w,L.h);
 const gV=el('g',{},ml), gR=el('g',{style:'display:none'},ml);
-D.villages.forEach(v=>{v.rings.forEach(r=>el('polygon',{points:pts(r),fill:'none',stroke:'#fff','stroke-width':1.2*U(ml),opacity:.9},gV));lab(gV,v.label[0],v.label[1],v.name.replace('村',''),'s x')});
+D.villages.forEach(v=>{v.rings.forEach(r=>el('polygon',{points:pts(r),fill:'none',stroke:'#fff','stroke-width':1.2*U(ml),opacity:.9},gV));});
 el('polyline',{points:pts(D.river.path_local),fill:'none',stroke:'#2d6cb5','stroke-width':2.6*U(ml),'stroke-linejoin':'round'},gR);
-lab(ml,L.w*0.2,L.h*0.08,'中央山脈','');lab(ml,L.w*0.82,L.h*0.2,'海岸山脈','');lab(ml,L.w*0.4,L.h*0.45,'花東縱谷','');
+(function(){ // 標籤碰撞避讓：依序放置，擇第一個不與已放置標籤重疊的候選位置
+ const placed=[],u=U(ml);
+ const hit=(a,b,pad)=>!(a.x+a.width+pad<b.x||b.x+b.width+pad<a.x||a.y+a.height+pad<b.y||b.y+b.height+pad<a.y);
+ function place(parent,x,y,t,cls,cands){
+  const e=lab(parent,x,y,t,cls);const f=parseFloat(e.getAttribute('font-size'));let best=null,bo=1e9;
+  for(const c of cands){e.setAttribute('x',x+c[0]*f);e.setAttribute('y',y+c[1]*f);
+   const b=e.getBBox();let o=0;placed.forEach(q=>{if(hit(b,q,f*0.15))o++});
+   if(o<bo){bo=o;best=c;if(!o)break}}
+  e.setAttribute('x',x+best[0]*f);e.setAttribute('y',y+best[1]*f);placed.push(e.getBBox());return e}
+ const near=[[0,0],[0,-1.1],[0,1.1],[-1.3,0],[1.3,0],[-1,-1.1],[1,-1.1],[-1,1.1],[1,1.1],[0,-2.2],[0,2.2]];
+ // 村名先放（小字、位置固定優先），大地名再找空位
+ D.villages.forEach(v=>place(gV,v.label[0],v.label[1],v.name.replace('村',''),'s x',near));
+ const grid=(cx,cy)=>{const a=[];for(let r=0;r<=6;r++)for(let k=0;k<8;k++){const t=k*Math.PI/4;a.push([Math.cos(t)*r*1.6,Math.sin(t)*r*0.9])}return a};
+ place(ml,L.w*0.2,L.h*0.08,'中央山脈','',[[0,0],[0,1.3]]);
+ place(ml,L.w*0.82,L.h*0.2,'海岸山脈','',[[0,0],[0,1.3]]);
+ // 花東縱谷：從縱谷中線上方的空地起找，避開村名
+ place(ml,L.w*0.42,L.h*0.2,'花東縱谷','',grid());
+})();
 $('#tgVill').onclick=e=>{const b=e.target;b.classList.toggle('on');gV.style.display=b.classList.contains('on')?'':'none'};
 $('#tgRiver').onclick=e=>{const b=e.target;b.classList.toggle('on');gR.style.display=b.classList.contains('on')?'':'none'};
 
