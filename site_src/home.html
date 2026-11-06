@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>瑞穗生活地圖</title>
+<meta name="description" content="給瑞穗鄉親的生活資訊地圖：就醫、農事天氣、通學、稻作衛星、地形。資料來自政府開放資料，自動更新。">
+<meta property="og:title" content="瑞穗生活地圖">
+<meta property="og:description" content="就醫、農事天氣、通學、稻作衛星、地形：給瑞穗鄉親的生活資訊地圖">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#f6f3ec;--card:#fffdf8;--ink:#26302b;--mute:#66706a;--line:#ded8c9;--accent:#4f7a58;--accent-ink:#fff;--warn:#c2452d}
+@media (prefers-color-scheme:dark){:root{--bg:#171b19;--card:#212724;--ink:#ecebe5;--mute:#a3aba5;--line:#343c38;--accent:#7fb08a;--accent-ink:#10140f;--warn:#ff8a73}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.6 system-ui,-apple-system,"Microsoft JhengHei","Noto Sans TC","PingFang TC",sans-serif;
+  padding:max(28px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom))}
+main{max-width:480px;margin:0 auto}
+header{text-align:center;margin-bottom:22px}
+.logo{width:72px;height:72px;border-radius:50%;background:var(--accent);display:grid;place-items:center;margin:0 auto 12px}
+.logo svg{width:44px;height:44px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:.04em}
+.sub{color:var(--mute);margin:0 0 12px;font-size:15px}
+.ig{display:inline-flex;align-items:center;gap:6px;color:var(--ink);text-decoration:none;font-size:15px;
+  border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--card)}
+.ig svg{width:18px;height:18px}
+.sos{background:var(--card);border:1.5px solid var(--warn);color:var(--ink);border-radius:14px;padding:10px 14px;
+  margin:0 0 16px;font-size:15px;display:flex;gap:10px;align-items:center}
+.sos a{color:var(--warn);font-weight:700;text-decoration:none;white-space:nowrap}
+.links{display:flex;flex-direction:column;gap:12px}
+.link{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:14px 14px 14px 16px;text-decoration:none;color:var(--ink);min-height:76px;transition:transform .12s,border-color .12s}
+.link:hover,.link:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
+.ic{font-size:30px;line-height:1;flex:none;width:40px;text-align:center}
+.tx{flex:1;display:flex;flex-direction:column;min-width:0}
+.tx b{font-size:18px}
+.tx small{color:var(--mute);font-size:14px;line-height:1.45}
+.tx em{font-style:normal;font-size:12.5px;color:var(--accent);font-weight:600;margin-top:3px}
+.go{font-size:26px;color:var(--mute);flex:none}
+footer{margin-top:28px;color:var(--mute);font-size:13px;line-height:1.7}
+footer h2{font-size:14px;color:var(--ink);margin:16px 0 4px}
+footer ul{margin:0;padding-left:18px}
+footer a{color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 48 48" fill="none" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 36 L17 18 L25 28 L31 21 L44 36 Z"/><path d="M8 42 H40"/>
+    </svg>
+  </div>
+  <h1>瑞穗生活地圖</h1>
+  <p class="sub">給瑞穗鄉親的生活資訊地圖<br>資料來自政府開放資料，自動更新</p>
+  <a class="ig" href="https://www.instagram.com/tzengchangfu/" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+    </svg>tzengchangfu</a>
+</header>
+
+<div class="sos" role="note"><span>緊急狀況請直接撥打</span><a href="tel:119">📞 119</a></div>
+
+<nav class="links" aria-label="地圖列表">
+{{CARDS}}
+</nav>
+
+<footer>
+  <h2>使用說明</h2>
+  <ul>
+    <li>各頁資料都標有來源與更新日期，僅供參考。看診時段由院所自行登錄，出門前請先打電話確認。</li>
+    <li>開車與步行時間是用道路資料估算，不含塞車、等紅燈，實際時間可能較長。</li>
+    <li>本網站的程式與資料整理有使用 AI 輔助，數字都已對照原始資料；發現錯誤歡迎告訴我。</li>
+  </ul>
+  <h2>資料來源</h2>
+  <ul>
+    <li>衛生福利部中央健康保險署、衛生福利部、內政部戶政司、內政部國土測繪中心、內政部地政司、交通部中央氣象署、交通部 TDX、公路局、教育部、花蓮縣政府等開放資料，依「政府資料開放授權條款第1版」使用。</li>
+    <li>地圖與道路：© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>。</li>
+    <li>衛星影像：Contains modified Copernicus Sentinel data。</li>
+    <li>各頁底部列有完整出處。</li>
+  </ul>
+  <p>網站更新：{{BUILT}}（台灣時間）</p>
+</footer>
+</main>
+</body>
+</html>

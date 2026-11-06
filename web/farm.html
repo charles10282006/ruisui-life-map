@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>瑞穗農事天氣窗</title>
+<meta name="description" content="把氣象署瑞穗鄉預報換算成「哪個時段適合噴藥、曬穀，中午會不會熱到危險」。">
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#ffffff; --ink:#1d2321; --ink2:#55605c; --line:#d9d6cc; --accent:#1f6f5c; --accent-ink:#fff;
+  --ok:#1f7a3a; --ok-bg:#e3f3e6; --warn:#8a5a00; --warn-bg:#fff3d1; --no:#b3261e; --no-bg:#fde7e5; --off:#6b7280; --off-bg:#eeece6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151918; --panel:#1f2523; --ink:#eef1ee; --ink2:#a9b3ae; --line:#38413d; --accent:#5cc2a6; --accent-ink:#0d1513;
+    --ok:#7dd99a; --ok-bg:#1b3324; --warn:#f5c76b; --warn-bg:#3a2f14; --no:#ff8a80; --no-bg:#3a1d1b; --off:#9aa3a0; --off-bg:#2a312e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151918; --panel:#1f2523; --ink:#eef1ee; --ink2:#a9b3ae; --line:#38413d; --accent:#5cc2a6; --accent-ink:#0d1513;
+  --ok:#7dd99a; --ok-bg:#1b3324; --warn:#f5c76b; --warn-bg:#3a2f14; --no:#ff8a80; --no-bg:#3a1d1b; --off:#9aa3a0; --off-bg:#2a312e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;font-size:18px;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 32px}
+header{padding:16px 0 4px}
+h1{margin:0;font-size:1.4rem}
+h2{font-size:1.15rem;margin:24px 0 8px}
+.hint{color:var(--ink2);font-size:.9rem}
+.cards{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:640px){.cards{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.card .k{font-size:.9rem;color:var(--ink2);font-weight:700}
+.card .v{font-size:1.2rem;font-weight:800;margin-top:2px}
+.card .s{font-size:.85rem;color:var(--ink2)}
+.b{display:inline-block;min-width:3.6em;text-align:center;padding:2px 8px;border-radius:999px;font-weight:800;font-size:.88rem}
+.b.ok{background:var(--ok-bg);color:var(--ok)} .b.warn{background:var(--warn-bg);color:var(--warn)}
+.b.no{background:var(--no-bg);color:var(--no)} .b.off{background:var(--off-bg);color:var(--off)}
+.day{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+.day h3{margin:0;padding:10px 14px;font-size:1.05rem;background:var(--off-bg)}
+.slot{display:grid;grid-template-columns:4.2em 1fr;gap:4px 10px;padding:10px 14px;border-top:1px solid var(--line)}
+.slot:first-of-type{border-top:none}
+.slot .t{font-weight:800}
+.slot .wx{font-size:.95rem}
+.slot .meta{grid-column:2;font-size:.85rem;color:var(--ink2)}
+.slot .badges{grid-column:2;display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.9rem;align-items:center}
+.slot .why{grid-column:2;font-size:.8rem;color:var(--ink2)}
+.slot.past{opacity:.45}
+table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:14px;overflow:hidden;font-size:.92rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--off-bg);font-size:.85rem}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.seg button{min-height:44px;padding:6px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:1rem;cursor:pointer}
+.seg button[aria-pressed="true"]{border:2px solid var(--accent);font-weight:800}
+ul.src{font-size:.85rem;color:var(--ink2);padding-left:1.2em}
+a{color:var(--accent)}
+footer{margin-top:28px;font-size:.85rem;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>瑞穗農事天氣窗</h1>
+  <p class="hint" id="upd">資料載入中…</p>
+</header>
+
+<section class="cards" id="summary" aria-live="polite"></section>
+
+<h2>未來幾天，每 3 小時</h2>
+<div class="seg" role="group" aria-label="只看">
+  <button data-f="all" aria-pressed="true">全部</button>
+  <button data-f="day" aria-pressed="false">只看白天</button>
+</div>
+<p class="hint">
+  <span class="b ok">可以</span> <span class="b warn">注意</span> <span class="b no">不建議</span>：噴藥、曬穀依降雨、風、溫溼度判斷；熱傷害直接採用氣象署警示。
+</p>
+<div id="days"></div>
+
+<h2>一週概況（每 12 小時）</h2>
+<div style="overflow-x:auto"><table id="week"><thead><tr><th>時段</th><th>天氣</th><th>降雨</th><th>溫度</th><th>曬穀</th></tr></thead><tbody></tbody></table></div>
+
+<h2>怎麼判斷的</h2>
+<ul>
+  <li><b>噴藥「可以」</b>：風 2 級以下、這 3 小時降雨機率 20% 以下、下 3 小時 30% 以下、沒有下雨或雷雨。<b>「不建議」</b>：風 4 級以上、降雨機率超過 40%（或下一段超過 50%）、預報有雨、或熱傷害「危險」。氣溫 32°C 以上至少列「注意」。</li>
+  <li>風速門檻參考農業藥物試驗所的無人機施藥指引（蒲福風級 2 級，約每秒 3.3 公尺以下）；<b>地面噴藥請以農藥標示為準</b>。降雨與溫度門檻是本頁自訂的參考值，不是官方標準。</li>
+  <li><b>曬穀「適合」</b>：白天、降雨機率 10% 以下、晴或多雲、平均濕度 75% 以下；有雨或降雨機率超過 20% 列「不建議」。</li>
+  <li><b>熱傷害</b>：直接顯示氣象署「熱傷害指數及警示」（注意／警戒／危險），本頁不另訂門檻。</li>
+  <li>預報是<b>瑞穗鄉的代表點</b>，奇美、舞鶴台地等山區或河谷可能不同；午後雷陣雨常在預報之外，請隨時看天色。</li>
+</ul>
+
+<h2>資料來源</h2>
+<ul class="src">
+  <li>交通部中央氣象署 氣象資料開放平臺：鄉鎮天氣預報－花蓮縣未來 3 天（F-D0047-041）、未來 1 週（F-D0047-043）、健康氣象－熱傷害指數及警示（M-A0085-001）。</li>
+  <li>農業部農業藥物試驗所：無人機農噴施作規範及基本施藥指引（風速參考）。</li>
+</ul>
+<footer>
+  <a href="index.html">← 瑞穗就醫地圖</a>　製作：@tzengchangfu
+</footer>
+</div>
+
+<script>
+"use strict";
+const WD=["日","一","二","三","四","五","六"];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const D=s=>new Date(s+":00+08:00");
+const dayKey=d=>`${d.getMonth()+1}/${d.getDate()}`;
+const hm=d=>`${String(d.getHours()).padStart(2,"0")}:00`;
+function dayLabel(d){
+  const t=new Date(); t.setHours(0,0,0,0);
+  const x=new Date(d); x.setHours(0,0,0,0);
+  const k=Math.round((x-t)/864e5);
+  return (k===0?"今天":k===1?"明天":k===2?"後天":"")+` ${dayKey(d)}（${WD[d.getDay()]}）`;
+}
+const LV={ok:["可以","ok"],warn:["注意","warn"],no:["不建議","no"],night:["夜間","off"]};
+const DRY={ok:["適合","ok"],warn:["普通","warn"],no:["不建議","no"],night:["—","off"]};
+function badge(map,l){const [t,c]=map[l]||["—","off"];return `<span class="b ${c}">${t}</span>`;}
+function heatBadge(s){
+  if(s.heat==null) return `<span class="b off">—</span>`;
+  const w=s.heatWarn, c=w==="危險"?"no":(w==="警戒"||w==="注意")?"warn":"ok";
+  return `<span class="b ${c}">${w||"無警示"}</span> <span class="hint">指數 ${s.heat}</span>`;
+}
+// 把連續的「可以」時段併成一段
+function windows(slots, pick, test){
+  const out=[]; let cur=null;
+  for(const s of slots){
+    if(test(pick(s))){ if(cur && cur.end===s.start) cur.end=s.end; else { cur={start:s.start,end:s.end}; out.push(cur);} }
+    else cur=null;
+  }
+  return out;
+}
+function fmtWin(w){const a=D(w.start),b=D(w.end);return `${dayLabel(a)} ${hm(a)}–${b.getHours()===0?"24:00":hm(b)}`;}
+
+let DATA=null, FILTER="all";
+function render(){
+  const now=new Date();
+  const slots=DATA.slots.filter(s=>D(s.end)>now);
+  const in48=slots.filter(s=>D(s.start)-now < 48*36e5);
+  // 摘要
+  const daytime=s=>{const h=D(s.start).getHours();return h>=5&&h<18;};
+  const sprayW=windows(slots.filter(daytime), s=>s.spray.lvl, l=>l==="ok");
+  const dryW=windows(slots, s=>s.dry.lvl, l=>l==="ok");
+  const heatMax=in48.reduce((m,s)=>{const r={"":0,"注意":1,"警戒":2,"危險":3}[s.heatWarn||""]||0;return r>m.r?{r,s}:m;},{r:0,s:null});
+  const weekDry=DATA.week.filter(w=>D(w.start).getHours()===6 && /^\d+$/.test(w.ProbabilityOfPrecipitation||"") && +w.ProbabilityOfPrecipitation<=10 && /晴|多雲/.test(w.Weather) && !/雨|雷/.test(w.Weather));
+  document.getElementById("summary").innerHTML=`
+    <div class="card"><div class="k">下一個適合噴藥的時段</div>
+      <div class="v">${sprayW.length?esc(fmtWin(sprayW[0])):"未來 3 天沒有"}</div>
+      <div class="s">${sprayW.length>1?`另有 ${sprayW.length-1} 段`:"風小、短時間內不太會下雨"}</div></div>
+    <div class="card"><div class="k">適合曬穀的時段</div>
+      <div class="v">${dryW.length?esc(fmtWin(dryW[0])):(weekDry.length?esc(dayLabel(D(weekDry[0].start)))+" 白天":"一週內沒有")}</div>
+      <div class="s">${dryW.length?"晴或多雲、降雨機率 10% 以下":(weekDry.length?"依一週預報，較不準":"可留意一週預報更新")}</div></div>
+    <div class="card"><div class="k">48 小時內熱傷害</div>
+      <div class="v">${heatMax.s?esc(heatMax.s.heatWarn):"沒有警示"}</div>
+      <div class="s">${heatMax.s?esc(dayLabel(D(heatMax.s.start))+" "+hm(D(heatMax.s.start)))+" 起，避免中午長時間戶外工作":"仍請多補水、適時休息"}</div></div>`;
+  // 每 3 小時
+  const groups={};
+  for(const s of slots){ if(FILTER==="day" && !daytime(s)) continue; (groups[dayKey(D(s.start))] ||= []).push(s); }
+  document.getElementById("days").innerHTML=Object.values(groups).map(g=>`
+    <div class="day"><h3>${esc(dayLabel(D(g[0].start)))}</h3>${g.map(s=>{
+      const a=D(s.start), past=D(s.start)<now;
+      const why=[...new Set([...(s.spray.lvl!=="ok"?s.spray.why:[]),...(s.dry.lvl==="no"||s.dry.lvl==="warn"?s.dry.why:[])])];
+      return `<div class="slot${past?" past":""}">
+        <div class="t">${hm(a)}</div>
+        <div class="wx">${esc(s.wx)}・降雨 ${s.pop??"—"}%・${s.tmin??"—"}–${s.tmax??"—"}°C</div>
+        <div class="meta">${esc(s.wd)} ${s.bf!=null?Math.round(s.bf)+" 級":""}・濕度 ${s.rh??"—"}%・體感最高 ${s.feel??"—"}°C</div>
+        <div class="badges"><span>噴藥 ${badge(LV,s.spray.lvl)}</span><span>曬穀 ${badge(DRY,s.dry.lvl)}</span><span>熱傷害 ${heatBadge(s)}</span></div>
+        ${why.length?`<div class="why">原因：${esc(why.join("、"))}</div>`:""}
+      </div>`;}).join("")}</div>`).join("");
+  // 一週
+  document.querySelector("#week tbody").innerHTML=DATA.week.filter(w=>D(w.end)>now).map(w=>{
+    const a=D(w.start), h=a.getHours(), day=h>=6 && h<18;
+    const part = h===6?"白天":(h>=12&&h<18?"下午":"晚上");
+    // 氣象署一週預報第 3 天後不提供降雨機率（"-"），此時只看天氣現象
+    const p = /^\d+$/.test(w.ProbabilityOfPrecipitation||"") ? +w.ProbabilityOfPrecipitation : null;
+    const rainy=/雨|雷/.test(w.Weather);
+    const ok=day && !rainy && /晴|多雲/.test(w.Weather) && p!==null && p<=10;
+    const no=rainy || (p!==null && p>20);
+    return `<tr><td>${esc(dayKey(a))}（${WD[a.getDay()]}）${part}</td><td>${esc(w.Weather)}</td>
+      <td>${p===null?"—":p+"%"}</td><td>${esc(w.MinTemperature)}–${esc(w.MaxTemperature)}°C</td>
+      <td>${day?badge(DRY, ok?"ok":no?"no":"warn"):'<span class="b off">—</span>'}</td></tr>`;}).join("");
+  const u=new Date(DATA.updated+":00+08:00");
+  document.getElementById("upd").textContent=`氣象署瑞穗鄉預報・本頁更新 ${dayKey(u)} ${String(u.getHours()).padStart(2,"0")}:${String(u.getMinutes()).padStart(2,"0")}`;
+}
+document.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click",()=>{
+  FILTER=b.dataset.f; document.querySelectorAll("[data-f]").forEach(x=>x.setAttribute("aria-pressed",x===b)); render();
+}));
+fetch("data/weather.json").then(r=>r.json()).then(d=>{DATA=d;render();})
+  .catch(()=>{document.getElementById("upd").textContent="資料載入失敗，請稍後再試。";});
+</script>
+</body>
+</html>

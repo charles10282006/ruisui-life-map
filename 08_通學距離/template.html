@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>瑞穗生活地圖｜通學距離</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#faf8f3;--card:#fff;--ink:#222;--sub:#5b5b5b;--line:#e3dfd3;--accent:#2f6f4f;--c1:#d9822b;--c2:#2a6fb0;--c3:#7a4fa3}
+@media (prefers-color-scheme:dark){:root{--bg:#161814;--card:#20231e;--ink:#eee;--sub:#aab;--line:#3a3e36;--accent:#7bc99a;--c1:#f0a35a;--c2:#6aaee8;--c3:#b995e0}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.6 "Noto Sans TC","Microsoft JhengHei",sans-serif}
+header{padding:14px 16px 6px}
+h1{font-size:24px;margin:0 0 4px}
+.lead{margin:0;color:var(--sub);font-size:16px}
+#map{height:46vh;min-height:300px;margin:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+main{padding:0 16px 24px;max-width:760px;margin:0 auto}
+.picker{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
+.picker button{font:inherit;font-size:18px;padding:8px 14px;min-height:44px;border-radius:22px;border:1.5px solid var(--line);background:var(--card);color:var(--ink)}
+.picker button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+.card h2{font-size:21px;margin:0 0 6px}
+.card h3{font-size:18px;margin:12px 0 4px}
+.muted{color:var(--sub);font-size:16px}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .nm{font-weight:700;font-size:19px}
+.row .big{font-size:20px;font-weight:700;text-align:right;white-space:nowrap}
+.row .det{grid-column:1/3;color:var(--sub);font-size:16px}
+.tag{display:inline-block;padding:0 8px;border-radius:10px;font-size:14px;color:#fff;margin-left:6px;vertical-align:2px}
+.l國小{background:var(--c1)}.l國中{background:var(--c2)}.l高中職{background:var(--c3)}
+table{border-collapse:collapse;width:100%;font-size:16px}
+td,th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}
+footer{padding:0 16px 40px;max-width:760px;margin:0 auto;color:var(--sub);font-size:15px}
+footer h2{font-size:19px;color:var(--ink)}
+footer li{margin:4px 0}
+.leaflet-container{font:inherit}
+.vt{background:#fffc;border:0;box-shadow:none;font-weight:700;font-size:14px;padding:0 4px;color:#1b4d36}
+.sq{width:20px;height:20px;border-radius:4px;border:2px solid #fff;box-shadow:0 0 3px #0008}
+.pin{width:18px;height:18px;border-radius:50%;background:#fff;border:4px solid #2f6f4f;box-shadow:0 0 3px #0008}
+</style>
+</head>
+<body>
+<header>
+<h1>瑞穗生活地圖｜通學距離</h1>
+<p class="lead">點選你的村，看到各學校的道路距離與時間。只列數字，不比較、不評價學校。</p>
+</header>
+<div id="map" aria-label="地圖"></div>
+<main>
+<div class="picker" id="picker" role="group" aria-label="選擇村"></div>
+<div id="out"><div class="card muted">請先點地圖上的村，或按上面的村名。</div></div>
+</main>
+<footer id="foot"></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const D = __DATA__;
+const LV = ["國小","國中","高中職"];
+const COL = {"國小":"#d9822b","國中":"#2a6fb0","高中職":"#7a4fa3"};
+const S = Object.fromEntries(D.schools.map(s=>[s.key,s]));
+const map = L.map('map',{zoomControl:true}).setView([23.50,121.37],11);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(map);
+const vl = {};
+let cur = null, pin = null;
+const esc = t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+D.villages.forEach(v=>{
+  const g = L.geoJSON(v.geom,{style:{color:'#2f6f4f',weight:1.5,fillOpacity:.08}}).addTo(map);
+  g.on('click',()=>pick(v.name));
+  g.bindTooltip(v.name,{permanent:true,direction:'center',className:'vt'});
+  vl[v.name]=g;
+});
+D.schools.forEach(s=>{
+  const m = L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:`<div class="sq" style="background:${COL[s.level]}"></div>`,iconSize:[20,20],iconAnchor:[10,10]})}).addTo(map);
+  m.bindPopup(schoolInfo(s));
+});
+function schoolInfo(s){
+  let h=`<b style="font-size:18px">${esc(s.key)}</b>（${s.level}）<br>`;
+  h+= s.addr? `地址：${esc(s.addr)}<br><span class="muted">地址來源：${esc(s.addr_src)}</span><br>` : `<span class="muted">未取得官方地址；位置僅依 OpenStreetMap</span><br>`;
+  h+= s.students!=null? `學生數：${s.students} 人（${s.students_year} 學年度）<br>` : `學生數：查不到校別公開資料<br>`;
+  if(s.why) h+=`<span class="muted">列入原因：${esc(s.why)}</span><br>`;
+  if(s.note) h+=`<span class="muted">${esc(s.note)}</span>`;
+  return h;
+}
+const pk = document.getElementById('picker');
+D.villages.forEach(v=>{const b=document.createElement('button');b.textContent=v.name;b.setAttribute('aria-pressed','false');b.onclick=()=>pick(v.name);pk.appendChild(b)});
+
+function dist(r){
+  const d = r.drive_km!=null ? `<div class="big">開車 ${r.drive_km} 公里<br>約 ${r.drive_min} 分鐘</div>` : `<div class="big">查無路徑</div>`;
+  return d;
+}
+function pick(name){
+  cur = name;
+  const v = D.villages.find(x=>x.name===name);
+  [...pk.children].forEach(b=>b.setAttribute('aria-pressed',b.textContent===name));
+  Object.values(vl).forEach(l=>l.setStyle({fillOpacity:.08,weight:1.5}));
+  vl[name].setStyle({fillOpacity:.3,weight:3}); map.fitBounds(vl[name].getBounds(),{maxZoom:13,padding:[20,20]});
+  if(pin) map.removeLayer(pin);
+  pin = L.marker([v.lat,v.lon],{icon:L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map).bindPopup('計算起點（'+esc(v.name)+'）');
+  let h=`<div class="card"><h2>${esc(v.name)}</h2>
+  <div class="muted">戶數 ${v.households}、人口 ${v.people}（115 年 9 月）；6–11 歲 ${v.age6_11} 人、12–14 歲 ${v.age12_14} 人</div></div>`;
+  if(v.zone) h+=`<div class="card"><h3 style="margin-top:0">公告學區（115 學年度起）</h3>
+   <div><b>國小：</b>${esc(v.zone.小)}</div><div><b>國中：</b>${esc(v.zone.中)}</div>
+   <div class="muted">學區為縣府公告原文摘要；實際以戶籍門牌為準，請向學校或縣府教育處確認。</div></div>`;
+  LV.forEach(lv=>{
+    const rs = v.rows.filter(r=>S[r.school].level===lv);
+    if(!rs.length) return;
+    h+=`<div class="card"><h2>${lv}<span class="tag l${lv}">${rs.length} 校</span></h2>`;
+    rs.forEach(r=>{
+      const s=S[r.school];
+      let det=[];
+      det.push(s.town+(s.students!=null?`・${s.students} 人（${s.students_year} 學年）`:'・學生數：查不到校別資料'));
+      if(r.walk_km!=null && r.walk_km<=6) det.push(`步行 ${r.walk_km} 公里約 ${r.walk_min} 分鐘`);
+      h+=`<div class="row"><div class="nm">${esc(r.school)}</div>${dist(r)}<div class="det">${det.join('；')}${s.note?'<br>'+esc(s.note):''}</div></div>`;
+    });
+    h+='</div>';
+  });
+  h+=`<div class="card muted">起點是「${esc(v.name)}」內${esc(v.how)}；不是你家門口，實際距離會有出入。</div>`;
+  document.getElementById('out').innerHTML=h;
+  document.getElementById('out').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// 頁尾：假設與出處
+const sp = Object.entries(D.drive_speeds).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+document.getElementById('foot').innerHTML=`
+<h2>怎麼算的</h2>
+<ul>
+<li>起點：每個村內路口最密集處（OpenStreetMap 路網，視為聚落中心），不是各戶的實際位置。</li>
+<li>終點：各校在 OpenStreetMap 上的位置。</li>
+<li>開車：OpenStreetMap 開車路網，依道路等級假設速度（下表），未計紅綠燈、塞車、停車與接送時間；只計道路，故為估算值。</li>
+<li>步行：OpenStreetMap 步行路網，假設每小時 ${D.walk_kmh} 公里；只在 6 公里內顯示。</li>
+<li>抽查 4 組開車時間對照 Google 地圖（2026-11-06，無車流）：差 −4 至 +3 分鐘；約 6 公里內的短程估算偏快（未計路口與減速），請預留彈性。</li>
+<li>學區是縣府公告的行政規定；本頁只列公告內容，不判斷哪所學校適合哪位孩子。</li>
+<li>高中職無校別學生數的開放資料，故不顯示。</li>
+</ul>
+<table><tr><th>道路等級（OSM）</th><th>假設時速 km/h</th></tr>${sp}<tr><td>其他</td><td>${D.drive_default}</td></tr></table>
+<h2>資料出處</h2>
+<ul>${D.sources.map(a=>`<li><b>${esc(a[0])}</b>：${esc(a[1])}</li>`).join('')}</ul>
+<p>資料更新日：${D.generated}。教育部資料為每年一次，學生數為該學年度 9 月底。</p>
+<p>© OpenStreetMap contributors。政府資料依「政府資料開放授權條款第1版」使用。</p>`;
+window.pick = pick;
+</script>
+</body>
+</html>

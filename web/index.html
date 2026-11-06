@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>瑞穗就醫地圖</title>
+<meta name="description" content="瑞穗鄉居民查詢：離家最近的診所、急診、藥局、AED 要開車幾分鐘，今天哪些診所有看診，以及搭火車、客運去看病的班次。">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#ffffff; --ink:#1d2321; --ink2:#55605c; --line:#d9d6cc;
+  --accent:#1f6f5c; --accent-ink:#ffffff; --warn:#b3261e; --warn-bg:#fdecea;
+  --ok:#1f7a3a; --ok-bg:#e6f4ea; --muted-bg:#eeece6;
+  --c-clinic:#1f6f5c; --c-er:#b3261e; --c-pharmacy:#7a4fb5; --c-aed:#d9480f;
+  --c-dental:#2b6cb0; --c-tcm:#8a6d1d; --c-station:#334155; --c-bus:#0e7490;
+  --t1:#2f9e44; --t2:#94c11f; --t3:#f2b705; --t4:#e8590c; --t5:#b3261e;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151918; --panel:#1f2523; --ink:#eef1ee; --ink2:#a9b3ae; --line:#38413d;
+    --accent:#5cc2a6; --accent-ink:#0d1513; --warn:#ff8a80; --warn-bg:#3a1d1b;
+    --ok:#7dd99a; --ok-bg:#1b3324; --muted-bg:#2a312e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151918; --panel:#1f2523; --ink:#eef1ee; --ink2:#a9b3ae; --line:#38413d;
+  --accent:#5cc2a6; --accent-ink:#0d1513; --warn:#ff8a80; --warn-bg:#3a1d1b;
+  --ok:#7dd99a; --ok-bg:#1b3324; --muted-bg:#2a312e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;font-size:18px;line-height:1.55}
+a{color:var(--accent)}
+.sos{position:sticky;top:0;z-index:1001;background:#b3261e;color:#fff;text-align:center;padding:8px 16px;font-weight:700}
+.sos a{color:#fff}
+header{padding:12px 16px 6px}
+header h1{margin:0;font-size:1.35rem}
+header p{margin:2px 0 0;color:var(--ink2);font-size:.88rem}
+nav.tabs{display:flex;gap:8px;padding:8px 16px;overflow-x:auto}
+nav.tabs button{flex:1 0 auto;min-height:48px;padding:8px 14px;border-radius:12px;border:2px solid var(--accent);
+  background:var(--panel);color:var(--accent);font-size:1rem;font-weight:700;cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+main{display:grid;grid-template-columns:1fr;gap:0}
+#map{height:52vh;min-height:320px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.panel{background:var(--panel);padding:16px;min-height:30vh}
+@media (min-width:900px){
+  main{grid-template-columns:minmax(0,1fr) 420px;height:calc(100vh - 170px)}
+  #map{height:100%;border:none}
+  .panel{overflow-y:auto;border-left:1px solid var(--line)}
+}
+.panel h2{font-size:1.15rem;margin:0 0 8px}
+.panel h3{font-size:1rem;margin:16px 0 6px;display:flex;align-items:center;gap:8px}
+.hint{color:var(--ink2);font-size:.9rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:8px 16px;border-radius:12px;
+  border:none;background:var(--accent);color:var(--accent-ink);font-size:1rem;font-weight:700;cursor:pointer}
+.btn.secondary{background:var(--muted-bg);color:var(--ink)}
+.card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0;background:var(--panel)}
+.card .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card .name{font-weight:700}
+.card .min{font-weight:800;font-size:1.25rem;white-space:nowrap}
+.card .sub{color:var(--ink2);font-size:.86rem}
+.tag{display:inline-block;font-size:.8rem;padding:1px 8px;border-radius:999px;margin-right:4px;font-weight:700}
+.tag.open{background:var(--ok-bg);color:var(--ok)}
+.tag.closed{background:var(--muted-bg);color:var(--ink2)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.85rem;color:var(--ink2);margin:6px 0}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.seg button{min-height:44px;padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:.95rem;cursor:pointer}
+.seg button[aria-pressed="true"]{border:2px solid var(--accent);font-weight:700}
+label.f{display:block;margin:10px 0 4px;font-weight:700}
+select,input[type=time],input[type=date]{width:100%;min-height:48px;font-size:1rem;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.trip{border-left:6px solid var(--accent);padding-left:10px;margin:10px 0}
+.trip .big{font-size:1.2rem;font-weight:800}
+.small{font-size:.82rem;color:var(--ink2)}
+.sources{font-size:.85rem;color:var(--ink2)}
+.sources li{margin:4px 0}
+.leaflet-container{font:inherit;background:var(--bg)}
+.pin{border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);color:#fff;font-size:12px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.pin.dim{opacity:.35}
+.pin.glow{box-shadow:0 0 0 3px var(--ok),0 0 10px var(--ok)}
+.youarehere{background:#111;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #111}
+footer{padding:16px;color:var(--ink2);font-size:.85rem}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="sos">緊急狀況請直接撥 <a href="tel:119">119</a>　本地圖只供平時參考</div>
+<header>
+  <h1>瑞穗就醫地圖</h1>
+  <p id="updated">資料載入中…</p>
+</header>
+<nav class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="near">查我家附近</button>
+  <button role="tab" aria-selected="false" data-tab="open">現在有開</button>
+  <button role="tab" aria-selected="false" data-tab="ride">坐車去看病</button>
+  <button role="tab" aria-selected="false" data-tab="about">資料與說明</button>
+</nav>
+<main>
+  <div id="map" aria-label="瑞穗地圖"></div>
+  <section class="panel">
+    <!-- 查我家附近 -->
+    <div data-pane="near">
+      <h2>離你最近的醫療資源</h2>
+      <p class="hint">在地圖上點一下你家的位置，或按下方按鈕用手機定位（位置只在你的手機上計算，不會上傳）。</p>
+      <button class="btn" id="locate">📍 用我現在的位置</button>
+      <div class="seg" role="group" aria-label="道路顏色">
+        <span class="hint" style="align-self:center">道路顏色代表開車到最近的：</span>
+        <button data-road="clinic" aria-pressed="true">診所</button>
+        <button data-road="er" aria-pressed="false">急診</button>
+        <button data-road="aed" aria-pressed="false">AED</button>
+        <button data-road="pharmacy" aria-pressed="false">藥局</button>
+      </div>
+      <div class="legend" id="roadLegend"></div>
+      <div id="nearResult"><p class="hint">還沒選位置。</p></div>
+    </div>
+    <!-- 現在有開 -->
+    <div data-pane="open" hidden>
+      <h2 id="openTitle">現在有看診的院所</h2>
+      <p class="hint">依健保署登錄的固定看診時段（上午／下午／晚上），院所可能臨時休診，<b>出門前請先打電話確認</b>。</p>
+      <div class="seg" role="group" aria-label="時段">
+        <button data-sess="auto" aria-pressed="true">現在</button>
+        <button data-sess="0" aria-pressed="false">今天上午</button>
+        <button data-sess="1" aria-pressed="false">今天下午</button>
+        <button data-sess="2" aria-pressed="false">今天晚上</button>
+      </div>
+      <div id="openList"></div>
+    </div>
+    <!-- 坐車去看病 -->
+    <div data-pane="ride" hidden>
+      <h2>坐火車、客運去看病</h2>
+      <p class="hint">先在「查我家附近」選好你家位置，會算進走路到車站的時間；沒選的話從瑞穗車站出發。</p>
+      <label class="f" for="dest">要去哪裡看病？</label>
+      <select id="dest"></select>
+      <label class="f" for="rideDate">哪一天？</label>
+      <select id="rideDate"></select>
+      <label class="f" for="arrive">最晚幾點要到？（例如掛號時間）</label>
+      <input type="time" id="arrive" value="09:00">
+      <label class="f" for="back">大概幾點看完？</label>
+      <input type="time" id="back" value="12:00">
+      <p><button class="btn" id="plan">幫我找班次</button></p>
+      <div id="rideResult"></div>
+    </div>
+    <!-- 資料與說明 -->
+    <div data-pane="about" hidden>
+      <h2>怎麼算的、要注意什麼</h2>
+      <ul>
+        <li><b>開車分鐘數是估計值。</b>用 OpenStreetMap 道路，依道路等級假設車速（省道約 50–55、鄉道 30–40、巷道 25 公里），不含紅綠燈、塞車、找停車位，實際通常會多幾分鐘。</li>
+        <li><b>起點是離你最近的道路點</b>，不是你家門口；住得離路較遠的，請自己加上走到路邊的時間。</li>
+        <li><b>部分院所只定位到「路段」</b>（卡片上標「約略位置」），地圖上的點可能差幾百公尺，請以地址為準。</li>
+        <li><b>看診時段</b>是院所在健保署登錄的固定時段，不含臨時休診、醫師請假；國定假日請另外確認。</li>
+        <li><b>AED</b> 位置與開放時間由設置場所登錄；遇到心跳停止，請先打 119，派遣員會指引最近的 AED。</li>
+        <li><b>火車</b>用台鐵當日時刻表（含加班車、停駛），<b>客運</b>用公路局登錄的時刻，各站時間為推估，請提早到站。</li>
+        <li>各村統計以「村內道路點」計算，不是以人口加權。</li>
+      </ul>
+      <h3>資料來源</h3>
+      <ol class="sources" id="sourceList">
+        <li>衛生福利部中央健康保險署：健保特約醫事機構（診所、藥局、醫院）、特約院所固定服務時段（政府資料開放平臺 39283、39284、39280–39282、39291）。</li>
+        <li>衛生福利部：全國公共場所 AED 位置資訊。</li>
+        <li>交通部 TDX 運輸資料流通服務：臺鐵每日時刻表。</li>
+        <li>交通部公路局：公路客運時刻（政府資料開放平臺 6052）。</li>
+        <li>內政部國土測繪中心：村里界圖、臺灣通用電子地圖（底圖）。</li>
+        <li>© OpenStreetMap contributors（ODbL）：道路網、部分院所與車站位置。</li>
+      </ol>
+      <p class="sources">政府資料依「政府資料開放授權條款第 1 版」使用。院所資料有誤或位置不準，歡迎告訴我們修正。</p>
+      <p class="sources"><a href="farm.html">瑞穗農事天氣窗（噴藥、曬穀、熱傷害）→</a></p>
+      <p class="sources">製作：@tzengchangfu</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+const CAT = {
+  clinic:  {label:"診所・衛生所", short:"診", color:"var(--c-clinic)"},
+  er:      {label:"急診醫院", short:"急", color:"var(--c-er)"},
+  hospital:{label:"醫院", short:"院", color:"var(--c-er)"},
+  pharmacy:{label:"健保藥局", short:"藥", color:"var(--c-pharmacy)"},
+  dental:  {label:"牙醫", short:"牙", color:"var(--c-dental)"},
+  tcm:     {label:"中醫", short:"中", color:"var(--c-tcm)"},
+  aed:     {label:"AED", short:"A", color:"var(--c-aed)"},
+  station: {label:"火車站", short:"站", color:"var(--c-station)"},
+  bus:     {label:"客運站牌", short:"巴", color:"var(--c-bus)"},
+};
+const WD = ["一","二","三","四","五","六","日"];
+const SESS = ["上午","下午","晚上"];
+const S = {fac:[], byId:{}, access:null, roads:null, villages:null, transit:null, picked:null, roadCat:"clinic", markers:{}};
+
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtMin = m => m == null ? "—" : (m < 1 ? "1 分內" : `${Math.round(m)} 分`);
+function hav(a, b){ // 公尺
+  const R=6371000, t=Math.PI/180, dLa=(b[0]-a[0])*t, dLo=(b[1]-a[1])*t;
+  const x=Math.sin(dLa/2)**2+Math.cos(a[0]*t)*Math.cos(b[0]*t)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+const toMin = hhmm => { const [h,m]=hhmm.split(":").map(Number); return h*60+m; };
+const toHHMM = x => { const m=((Math.round(x)%1440)+1440)%1440; return `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`; };
+// 下車後到院所：1.5 公里內走路，再遠以計程車估（市區約時速 30 公里，另加 5 分鐘叫車）
+const egressOf = m => { const walk=m*1.3/(4000/60); return walk<=25 ? {min:walk, how:"走路"} : {min:m*1.3/500+5, how:"計程車"}; };
+function wdIdx(d){ return (d.getDay()+6)%7; } // 週一=0
+function nowSess(){ const h=new Date().getHours(); return h<12?0:(h<18?1:2); }
+function isOpen(f, wd, sess){ // 健保 21 碼：上午7碼、下午7碼、晚上7碼；N=看診、Y=休診
+  if(!f.hours || f.hours.length!==21) return null;
+  return f.hours[sess*7+wd]==="N";
+}
+function aedOpenNow(f){
+  if(!f.open) return null;
+  const d=new Date(), wd=wdIdx(d), t=d.getHours()*60+d.getMinutes();
+  const [s,e] = wd<5 ? [f.open[0],f.open[1]] : (wd===5 ? [f.open[2],f.open[3]] : [f.open[4],f.open[5]]);
+  if(!s || !e) return null;
+  return t>=toMin(s) && t<=toMin(e);
+}
+function minutesColor(m){
+  if(m==null) return "#888";
+  if(m<=5) return css("--t1"); if(m<=10) return css("--t2"); if(m<=15) return css("--t3");
+  if(m<=30) return css("--t4"); return css("--t5");
+}
+
+// ---------- 地圖 ----------
+const map = L.map("map", {zoomControl:true, preferCanvas:true}).setView([23.505, 121.39], 12);
+L.tileLayer("https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}", {
+  maxZoom: 19, attribution: '底圖：<a href="https://maps.nlsc.gov.tw/">內政部國土測繪中心</a>｜道路 © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+const roadLayer = L.layerGroup().addTo(map);
+const villageLayer = L.layerGroup().addTo(map);
+const facLayer = L.layerGroup().addTo(map);
+let hereMarker = null;
+
+function pinIcon(cat, cls=""){
+  const c = CAT[cat] || CAT.clinic, size = cat==="bus" ? 18 : 26;
+  return L.divIcon({className:"", iconSize:[size,size], iconAnchor:[size/2,size/2],
+    html:`<div class="pin ${cls}" style="width:${size}px;height:${size}px;background:${c.color}">${cat==="bus"?"":c.short}</div>`});
+}
+function facCat(f){ return f.cat==="hospital" && f.er ? "er" : f.cat; }
+// 營業／看診標籤：藥局說「營業」，醫院說「門診」（急診另計，不在健保看診時段資料內）
+function openTag(f, o){
+  if(o===null) return "";
+  const what = f.cat==="pharmacy" ? (o?"現在時段有營業":"現在時段未營業")
+             : f.cat==="hospital" ? (o?"門診：現在時段有看診":"門診：現在時段休診")
+             : (o?"現在時段有看診":"現在時段休診");
+  return `<span class="tag ${o?"open":"closed"}">${what}</span>`;
+}
+function facPopup(f){
+  const d=new Date(), wd=wdIdx(d), ss=nowSess();
+  let h = `<b>${esc(f.name)}</b><br><span class="small">${esc(CAT[facCat(f)]?.label||"")}</span>`;
+  if(f.addr) h += `<br>${esc(f.addr)}`;
+  if(f.spot) h += `<br>放置：${esc(f.spot)}`;
+  if(f.tel) h += `<br>📞 <a href="tel:${esc(f.tel.replace(/[^\d#]/g,""))}">${esc(f.tel)}</a>`;
+  const o = isOpen(f, wd, ss);
+  if(o!==null) h += `<br>${openTag(f, o)}`;
+  if(f.note) h += `<br><span class="small">備註：${esc(f.note)}</span>`;
+  if(f.cat==="aed"){ const a=aedOpenNow(f); if(a!==null) h+=`<br>${a?'<span class="tag open">現在可使用</span>':'<span class="tag closed">現在非開放時間</span>'}`; }
+  if(f.precision && f.precision!=="exact") h += `<br><span class="tag warn">約略位置</span><span class="small">請以地址為準</span>`;
+  if(f.routes) h += `<br>路線：${f.routes.map(esc).join("、")}`;
+  return h;
+}
+function drawFacilities(){
+  facLayer.clearLayers(); S.markers = {};
+  for(const f of S.fac){
+    if(f.cat==="bus" && !S.ruisuiStops.has(f.id)) continue;
+    const m = L.marker([f.lat,f.lon], {icon:pinIcon(facCat(f)), title:f.name, zIndexOffset: f.cat==="bus"?-100:0});
+    m.bindPopup(() => facPopup(f));
+    m.addTo(facLayer); S.markers[f.id] = m;
+  }
+}
+function drawRoads(){
+  roadLayer.clearLayers();
+  if(!S.roads) return;
+  for(const r of S.roads){
+    const m = r.m[S.roadCat];
+    L.polyline(r.c.map(([x,y])=>[y,x]), {color:minutesColor(m), weight:4, opacity:.85, interactive:false}).addTo(roadLayer);
+  }
+  document.getElementById("roadLegend").innerHTML =
+    [["5 分內","--t1"],["5–10","--t2"],["10–15","--t3"],["15–30","--t4"],["30 分以上","--t5"]]
+      .map(([t,v])=>`<span><i class="dot" style="background:${css(v)}"></i>${t}</span>`).join("");
+}
+function drawVillages(){
+  villageLayer.clearLayers();
+  L.geoJSON(S.villages, {style:{color:css("--ink2"), weight:1.5, dashArray:"4 4", fill:false}, interactive:false}).addTo(villageLayer);
+  for(const f of S.villages.features){
+    const c = L.geoJSON(f).getBounds().getCenter();
+    L.marker(c, {interactive:false, icon:L.divIcon({className:"", html:`<div style="font-size:13px;font-weight:700;color:${css("--ink2")};text-shadow:0 0 3px ${css("--bg")};white-space:nowrap;transform:translate(-50%,-50%)">${esc(f.properties.name)}</div>`})}).addTo(villageLayer);
+  }
+}
+
+// ---------- 查我家附近 ----------
+function nearestPoint(lat, lon){
+  let best=null, bd=Infinity;
+  for(const p of S.access.points){
+    const d=(p[0]-lat)**2+((p[1]-lon)*0.917)**2;
+    if(d<bd){bd=d; best=p;}
+  }
+  return {p:best, dist: best ? hav([lat,lon],[best[0],best[1]]) : Infinity};
+}
+function pick(lat, lon){
+  const {p, dist} = nearestPoint(lat, lon);
+  if(hereMarker) map.removeLayer(hereMarker);
+  hereMarker = L.marker([lat,lon], {icon:L.divIcon({className:"", iconSize:[20,20], html:'<div class="youarehere" style="width:20px;height:20px"></div>'})}).addTo(map);
+  const box = document.getElementById("nearResult");
+  if(!p || dist>3000){
+    S.picked=null;
+    box.innerHTML = `<p class="tag warn">這個位置不在瑞穗鄉的計算範圍內</p><p class="hint">目前只計算瑞穗鄉境內的道路。</p>`;
+    return;
+  }
+  S.picked = {lat, lon, p};
+  const cats = S.access.cats, get = c => p[2+cats.indexOf(c)] || [];
+  const d=new Date(), wd=wdIdx(d), ss=nowSess();
+  const section = (title, c, unit="開車") => {
+    // 同名站牌（兩個方向）只列最近的一個
+    const rows = get(c).filter(([id],i,a)=>a.findIndex(([j])=>S.byId[j]?.name===S.byId[id]?.name)===i);
+    if(!rows.length) return `<h3><i class="dot" style="background:${CAT[c].color}"></i>${title}</h3><p class="hint">附近沒有（${unit}超過計算上限）。</p>`;
+    return `<h3><i class="dot" style="background:${CAT[c].color}"></i>${title}</h3>` + rows.map(([id,m])=>{
+      const f=S.byId[id]; if(!f) return "";
+      let tags="";
+      tags += openTag(f, isOpen(f,wd,ss));
+      if(f.cat==="aed"){ const a=aedOpenNow(f); if(a!==null) tags += a?'<span class="tag open">現在可使用</span>':'<span class="tag closed">非開放時間</span>'; }
+      if(f.precision && f.precision!=="exact") tags += '<span class="tag warn">約略位置</span>';
+      const tel = f.tel ? ` ・ <a href="tel:${esc(f.tel.replace(/[^\d#]/g,""))}">${esc(f.tel)}</a>` : "";
+      return `<div class="card" data-id="${esc(id)}"><div class="row"><span class="name">${esc(f.name)}</span><span class="min">${unit} ${fmtMin(m)}</span></div>
+        <div class="sub">${esc(f.addr||f.spot||"")}${tel}</div><div>${tags}</div></div>`;
+    }).join("");
+  };
+  let warn = dist>400 ? `<p class="tag warn">你點的位置離最近的道路約 ${Math.round(dist)} 公尺，以下時間從路邊起算</p>` : "";
+  box.innerHTML = warn +
+    section("診所・衛生所","clinic") + section("急診","er") + section("AED","aed") +
+    section("健保藥局","pharmacy") + section("火車站","station","走路") + section("客運站牌","bus","走路") +
+    `<p class="small">開車時間為估計值，不含紅綠燈與停車。</p>`;
+  box.querySelectorAll(".card").forEach(el=>el.addEventListener("click",()=>{
+    const f=S.byId[el.dataset.id]; if(!f) return;
+    map.setView([f.lat,f.lon], 15); S.markers[f.id]?.openPopup();
+    if(window.innerWidth<900) document.getElementById("map").scrollIntoView({behavior:"smooth"});
+  }));
+}
+map.on("click", e => { if(currentTab()==="near") pick(e.latlng.lat, e.latlng.lng); });
+document.getElementById("locate").addEventListener("click", ()=>{
+  if(!navigator.geolocation){ alert("這支手機不支援定位，請直接點地圖。"); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => { map.setView([pos.coords.latitude,pos.coords.longitude],15); pick(pos.coords.latitude,pos.coords.longitude); },
+    () => alert("無法取得位置（可能沒有開啟定位權限），請直接點地圖。"),
+    {enableHighAccuracy:true, timeout:10000});
+});
+document.querySelectorAll("[data-road]").forEach(b=>b.addEventListener("click",()=>{
+  S.roadCat=b.dataset.road;
+  document.querySelectorAll("[data-road]").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  drawRoads();
+}));
+
+// ---------- 現在有開 ----------
+let openSess = "auto";
+function renderOpen(){
+  const d=new Date(), wd=wdIdx(d), ss = openSess==="auto" ? nowSess() : Number(openSess);
+  document.getElementById("openTitle").textContent = `星期${WD[wd]}${SESS[ss]}有看診的院所`;
+  const med = S.fac.filter(f=>["clinic","hospital","dental","tcm","pharmacy"].includes(f.cat) && f.hours);
+  const order = ["瑞穗鄉","光復鄉","玉里鎮","鳳林鎮","萬榮鄉","卓溪鄉"];
+  const open = med.filter(f=>isOpen(f,wd,ss)).sort((a,b)=>(order.indexOf(a.town)+1||99)-(order.indexOf(b.town)+1||99));
+  for(const f of S.fac){
+    const m=S.markers[f.id]; if(!m || !f.hours) continue;
+    const o=isOpen(f,wd,ss);
+    m.setIcon(pinIcon(facCat(f), currentTab()==="open" ? (o?"glow":"dim") : ""));
+  }
+  const groups = {};
+  for(const f of open) (groups[f.town||"其他"] ||= []).push(f);
+  document.getElementById("openList").innerHTML = Object.entries(groups).map(([t,fs]) =>
+    `<h3>${esc(t)}（${fs.length}）</h3>` + fs.map(f=>`<div class="card" data-id="${esc(f.id)}">
+      <div class="row"><span class="name">${esc(f.name)}</span><span class="tag open">${esc(CAT[facCat(f)].label)}</span></div>
+      <div class="sub">${esc(f.addr)}${f.tel?` ・ <a href="tel:${esc(f.tel.replace(/[^\d#]/g,""))}">${esc(f.tel)}</a>`:""}</div>
+      ${f.note?`<div class="small">備註：${esc(f.note)}</div>`:""}</div>`).join("")
+  ).join("") || `<p class="hint">這個時段沒有登錄看診的院所。</p>`;
+  document.querySelectorAll("#openList .card").forEach(el=>el.addEventListener("click",()=>{
+    const f=S.byId[el.dataset.id]; map.setView([f.lat,f.lon],15); S.markers[f.id]?.openPopup();
+  }));
+}
+document.querySelectorAll("[data-sess]").forEach(b=>b.addEventListener("click",()=>{
+  openSess=b.dataset.sess;
+  document.querySelectorAll("[data-sess]").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  renderOpen();
+}));
+
+// ---------- 坐車去看病 ----------
+const WALK = 4000/60; // 公尺/分
+function setupRide(){
+  const T = S.transit;
+  const dests = S.fac.filter(f=>(f.cat==="hospital" || (["clinic","dental","tcm"].includes(f.cat) && f.town!=="瑞穗鄉")));
+  const byTown = {};
+  for(const f of dests) (byTown[f.town] ||= []).push(f);
+  const sel = document.getElementById("dest");
+  const order = ["玉里鎮","光復鄉","鳳林鎮","壽豐鄉","花蓮市","新城鄉"];
+  sel.innerHTML = Object.keys(byTown).sort((a,b)=>(order.indexOf(a)+1||99)-(order.indexOf(b)+1||99)).map(t =>
+    `<optgroup label="${esc(t)}">` + byTown[t].sort((a,b)=>(b.cat==="hospital")-(a.cat==="hospital")).map(f=>
+      `<option value="${esc(f.id)}">${esc(f.name.replace(/^.*醫療財團法人/,""))}${f.er?"（有急診）":""}</option>`).join("") + "</optgroup>").join("");
+  const ds = document.getElementById("rideDate");
+  const days = T.rail ? Object.keys(T.rail.days) : [];
+  const base = new Date();
+  const opts = days.length ? days : [...Array(7)].map((_,k)=>{const d=new Date(base);d.setDate(d.getDate()+k);return d.toISOString().slice(0,10);});
+  ds.innerHTML = opts.map((d,k)=>{const x=new Date(d+"T00:00:00");return `<option value="${d}">${k===0?"今天":k===1?"明天":""} ${x.getMonth()+1}/${x.getDate()}（${WD[wdIdx(x)]}）</option>`;}).join("");
+}
+function homeLegs(){ // 從家走到各車站／站牌的分鐘數
+  const legs = {station:{}, bus:{}};
+  if(S.picked){
+    const c=S.access.cats, p=S.picked.p;
+    for(const [id,m] of (p[2+c.indexOf("station")]||[])) legs.station[S.byId[id]?.name.replace("車站","")] = m;
+    for(const [id,m] of (p[2+c.indexOf("bus")]||[])) legs.bus[id.replace(/^BUS/,"")] = m;
+  } else {
+    legs.station["瑞穗"] = 0;
+    const st = S.transit.rail?.stations?.["瑞穗"];
+    if(st) for(const [sid,[nm,la,lo]] of Object.entries(S.transit.bus.stops)) { const d=hav(st,[la,lo]); if(d<400) legs.bus[sid]=d/WALK; }
+  }
+  return legs;
+}
+function planRide(){
+  const T=S.transit, f=S.byId[document.getElementById("dest").value], date=document.getElementById("rideDate").value;
+  const arrive=toMin(document.getElementById("arrive").value||"09:00"), back=toMin(document.getElementById("back").value||"12:00");
+  const legs=homeLegs(), out=[];
+  const wd = wdIdx(new Date(date+"T00:00:00"));
+  // 火車
+  if(T.rail && T.rail.days[date]){
+    const st=T.rail.stations;
+    // 院所附近 3 公里內（至少含最近一站）的車站都列入，避免最近的小站沒有車停
+    const ranked = Object.entries(st).filter(([,c])=>c).map(([n,c])=>[n,hav(c,[f.lat,f.lon])]).sort((a,b)=>a[1]-b[1]);
+    const cands = ranked.filter((x,k)=>k===0 || x[1]<=3000);
+    const go=[], ret=[];
+    for(const t of T.rail.days[date]){
+      for(const [o,w] of Object.entries(legs.station)){
+        const i=t.s.findIndex(s=>s[0]===o); if(i<0) continue;
+        for(const [ds,dm] of cands){
+          const j=t.s.findIndex(s=>s[0]===ds), eg=egressOf(dm);
+          if(j>i){ const at=toMin(t.s[j][1])+eg.min; if(at<=arrive) go.push({t, o, ds, dm, eg, dep:t.s[i][1], arr:t.s[j][1], at, leave:toMin(t.s[i][1])-w-5, w}); }
+          if(j>=0 && j<i && toMin(t.s[j][1])>=back+eg.min) ret.push({t, o, ds, dep:t.s[j][1], arr:t.s[i][1]});
+        }
+      }
+    }
+    // 同一車次只留一個：出發最晚、下車後最快到院所的組合
+    const bestBy = (arr, key, better) => Object.values(arr.reduce((m,x)=>{const k=key(x); if(!m[k]||better(x,m[k])) m[k]=x; return m;},{}));
+    const go1 = bestBy(go, g=>g.t.no, (a,b)=>a.leave>b.leave || (a.leave===b.leave && a.at<b.at)).sort((a,b)=>b.at-a.at);
+    const ret1 = bestBy(ret, r=>r.t.no, (a,b)=>toMin(a.dep)<toMin(b.dep)).sort((a,b)=>toMin(a.dep)-toMin(b.dep));
+    out.push(`<h3>🚆 火車</h3>`);
+    out.push(go1.slice(0,3).map(g=>`<div class="trip"><div class="big">${toHHMM(g.leave)} 出門</div>
+      <div>${esc(g.o)}站 ${g.dep} 搭 ${esc(g.t.type)} ${esc(g.t.no)} 次 → ${esc(g.ds)}站 ${g.arr}</div>
+      <div class="small">走路到${esc(g.o)}站約 ${Math.round(g.w)} 分（已多留 5 分鐘）；${esc(g.ds)}站到院所約 ${Math.round(g.dm/100)/10} 公里，${g.eg.how==="計程車"?"<b>建議搭計程車</b>約":"走路約"} ${Math.round(g.eg.min)} 分，預計 ${toHHMM(g.at)} 到</div></div>`).join("")
+      || `<p class="hint">找不到 ${toHHMM(arrive)} 前能到的火車。</p>`);
+    if(ret1.length) out.push(`<p><b>回程</b>（${toHHMM(back)} 看完以後）：</p>` + ret1.slice(0,3).map(r=>
+      `<div class="small">・${esc(r.ds)}站 ${r.dep} ${esc(r.t.type)} ${esc(r.t.no)} 次 → ${esc(r.o)}站 ${r.arr}</div>`).join(""));
+  } else {
+    out.push(`<p class="hint">這一天沒有台鐵時刻資料。</p>`);
+  }
+  // 客運
+  const stops=T.bus.stops;
+  const destStops = new Set(Object.entries(stops).filter(([,s])=>hav([s[1],s[2]],[f.lat,f.lon])<700).map(([id])=>id));
+  const bgo=[], bret=[];
+  for(const t of T.bus.trips){
+    if(t.wd[wd]!=="1") continue;
+    if(t.from && date.replace(/-/g,"")<t.from.replace(/\D/g,"")) continue;
+    if(t.to && date.replace(/-/g,"")>t.to.replace(/\D/g,"")) continue;
+    const idx = id => t.s.findIndex(s=>s[0]===id);
+    for(const [sid,w] of Object.entries(legs.bus)){
+      const i=idx(sid); if(i<0) continue;
+      for(let j=0;j<t.s.length;j++){
+        if(!destStops.has(t.s[j][0])) continue;
+        const walkE = egressOf(hav([stops[t.s[j][0]][1],stops[t.s[j][0]][2]],[f.lat,f.lon])).min;
+        if(j>i){ const at=toMin(t.s[j][1])+walkE; if(at<=arrive) bgo.push({t, from:stops[sid][0], to:stops[t.s[j][0]][0], dep:t.s[i][1], arr:t.s[j][1], at, leave:toMin(t.s[i][1])-w-5, w}); }
+        if(j<i && toMin(t.s[j][1])>=back+walkE) bret.push({t, from:stops[t.s[j][0]][0], to:stops[sid][0], dep:t.s[j][1], arr:t.s[i][1]});
+        break;
+      }
+    }
+  }
+  // 同一班車（同一個班次物件）只留出門最晚的站牌
+  const byTrip = (arr, better) => { const m=new Map(); for(const x of arr){ const o=m.get(x.t); if(!o||better(x,o)) m.set(x.t,x);} return [...m.values()]; };
+  bgo.splice(0, bgo.length, ...byTrip(bgo, (a,b)=>a.leave>b.leave)); bgo.sort((a,b)=>b.at-a.at);
+  bret.splice(0, bret.length, ...byTrip(bret, (a,b)=>toMin(a.dep)<toMin(b.dep))); bret.sort((a,b)=>toMin(a.dep)-toMin(b.dep));
+  const uniq = (arr, k) => arr.filter((x,i,a)=>a.findIndex(y=>k(y)===k(x))===i);
+  out.push(`<h3>🚌 客運</h3>`);
+  if(!destStops.size) out.push(`<p class="hint">院所附近 700 公尺內沒有經過瑞穗的客運站牌。</p>`);
+  else {
+    out.push(uniq(bgo, g=>g.t.route+g.dep).slice(0,3).map(g=>`<div class="trip"><div class="big">${toHHMM(g.leave)} 出門</div>
+      <div>${esc(g.from)} ${g.dep} 搭 ${esc(g.t.route)}（${esc(g.t.name)}）→ ${esc(g.to)} ${g.arr}</div>
+      <div class="small">${esc(g.t.op)}・走路到站牌約 ${Math.round(g.w)} 分（已多留 5 分鐘）・各站時間為推估</div></div>`).join("")
+      || `<p class="hint">找不到 ${toHHMM(arrive)} 前能到的客運。</p>`);
+    if(bret.length) out.push(`<p><b>回程</b>：</p>` + uniq(bret, r=>r.t.route+r.dep).slice(0,3).map(r=>
+      `<div class="small">・${r.dep} ${esc(r.from)} 搭 ${esc(r.t.route)} → ${esc(r.to)} ${r.arr}</div>`).join(""));
+  }
+  if(!S.picked) out.unshift(`<p class="tag warn">還沒選你家的位置，以下從瑞穗車站附近出發計算</p>`);
+  const o=isOpen(f, wd, 0), o2=isOpen(f, wd, 1);
+  if(o!==null) out.unshift(`<p>${esc(f.name)} 星期${WD[wd]}：上午${o?'<span class="tag open">有看診</span>':'<span class="tag closed">休診</span>'} 下午${o2?'<span class="tag open">有看診</span>':'<span class="tag closed">休診</span>'}</p>`);
+  document.getElementById("rideResult").innerHTML = out.join("");
+}
+document.getElementById("plan").addEventListener("click", planRide);
+
+// ---------- 分頁 ----------
+function currentTab(){ return document.querySelector('[role=tab][aria-selected="true"]').dataset.tab; }
+document.querySelectorAll("[role=tab]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("[role=tab]").forEach(x=>x.setAttribute("aria-selected", x===b));
+  document.querySelectorAll("[data-pane]").forEach(p=>p.hidden = p.dataset.pane!==b.dataset.tab);
+  const t=b.dataset.tab;
+  if(t==="near"){ map.addLayer(roadLayer); } else { map.removeLayer(roadLayer); }
+  renderOpen();
+  if(t==="ride" && S.picked){ /* 保留已選位置 */ }
+}));
+
+// ---------- 載入 ----------
+Promise.all(["facilities","access","roads","villages","transit"].map(n=>fetch(`data/${n}.json`).then(r=>r.json())))
+.then(([fac, acc, roads, vil, tr])=>{
+  S.fac=fac.facilities; S.byId=Object.fromEntries(S.fac.map(f=>[f.id,f]));
+  S.access=acc; S.roads=roads; S.villages=vil; S.transit=tr;
+  S.ruisuiStops = new Set();
+  const ci = acc.cats.indexOf("bus");
+  for(const p of acc.points) for(const [id] of (p[2+ci]||[])) S.ruisuiStops.add(id);
+  const hu = fac.meta.hours_updated || "";
+  document.getElementById("updated").textContent =
+    `看診時段更新：${hu.slice(0,4)}-${hu.slice(4,6)}-${hu.slice(6,8)}・火車時刻更新：${tr.built}・路網計算：${acc.built}`;
+  drawVillages(); drawRoads(); drawFacilities(); setupRide(); renderOpen();
+  map.fitBounds(L.geoJSON(vil).getBounds(), {padding:[10,10]});
+}).catch(e=>{
+  document.getElementById("updated").textContent = "資料載入失敗，請稍後再試。";
+  console.error(e);
+});
+</script>
+</body>
+</html>

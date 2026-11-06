@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>瑞穗避難路線</title>
+<meta name="description" content="從家裡到避難收容處所，避開土石流潛勢溪流影響範圍與封閉道路的路線。">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#fff; --ink:#1d2321; --ink2:#55605c; --line:#d9d6cc; --accent:#1f6f5c; --accent-ink:#fff;
+  --safe:#1f7a3a; --fast:#6b7280; --deb:#e8590c; --red:#b3261e; --yel:#d4a106; --ok-bg:#e3f3e6; --warn-bg:#fff3d1; --no-bg:#fde7e5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#151918; --panel:#1f2523; --ink:#eef1ee; --ink2:#a9b3ae; --line:#38413d; --accent:#5cc2a6; --accent-ink:#0d1513;
+    --ok-bg:#1b3324; --warn-bg:#3a2f14; --no-bg:#3a1d1b; }
+}
+:root[data-theme="dark"]{ --bg:#151918; --panel:#1f2523; --ink:#eef1ee; --ink2:#a9b3ae; --line:#38413d; --accent:#5cc2a6; --accent-ink:#0d1513;
+  --ok-bg:#1b3324; --warn-bg:#3a2f14; --no-bg:#3a1d1b; }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;font-size:18px;line-height:1.55}
+a{color:var(--accent)}
+.sos{position:sticky;top:0;z-index:1001;background:#b3261e;color:#fff;text-align:center;padding:8px 16px;font-weight:700}
+.sos a{color:#fff}
+header{padding:12px 16px 4px}
+h1{margin:0;font-size:1.35rem}
+.hint{color:var(--ink2);font-size:.9rem}
+#status{margin:6px 16px;padding:10px 12px;border-radius:12px;font-size:.95rem}
+#status.calm{background:var(--ok-bg)} #status.alert{background:var(--no-bg)} #status.warn{background:var(--warn-bg)}
+main{display:grid;grid-template-columns:1fr}
+#map{height:50vh;min-height:320px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.panel{background:var(--panel);padding:16px}
+@media (min-width:900px){ main{grid-template-columns:minmax(0,1fr) 420px;height:calc(100vh - 210px)} #map{height:100%;border:none} .panel{overflow-y:auto;border-left:1px solid var(--line)} }
+h2{font-size:1.15rem;margin:0 0 8px} h3{font-size:1rem;margin:16px 0 6px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:8px 16px;border-radius:12px;border:none;background:var(--accent);color:var(--accent-ink);font-size:1rem;font-weight:700;cursor:pointer}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.seg button{min-height:44px;padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:.95rem;cursor:pointer}
+.seg button[aria-pressed="true"]{border:2px solid var(--accent);font-weight:800}
+label.chk{display:flex;align-items:center;gap:8px;min-height:44px;font-size:.95rem}
+label.chk input{width:22px;height:22px}
+.card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;cursor:pointer}
+.card .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card .name{font-weight:800} .card .min{font-weight:800;font-size:1.2rem;white-space:nowrap}
+.card .sub{font-size:.86rem;color:var(--ink2)}
+.tag{display:inline-block;font-size:.8rem;padding:1px 8px;border-radius:999px;margin:2px 4px 0 0;font-weight:700}
+.tag.ok{background:var(--ok-bg);color:var(--safe)} .tag.warn{background:var(--warn-bg);color:#8a5a00} .tag.no{background:var(--no-bg);color:var(--red)}
+.banner{padding:10px 12px;border-radius:12px;margin:8px 0;font-weight:700}
+.banner.no{background:var(--no-bg);color:var(--red)} .banner.warn{background:var(--warn-bg);color:#8a5a00}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--ink2);margin:6px 0}
+.legend i{display:inline-block;width:22px;height:6px;border-radius:3px;vertical-align:middle;margin-right:4px}
+.legend b{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle;margin-right:4px;opacity:.6}
+.pin{border-radius:6px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.youarehere{background:#111;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #111}
+ul.src{font-size:.85rem;color:var(--ink2);padding-left:1.2em}
+.leaflet-container{font:inherit;background:var(--bg)}
+</style>
+</head>
+<body>
+<div class="sos">緊急狀況請直接撥 <a href="tel:119">119</a>　接到撤離通知請聽從村長、消防人員指示</div>
+<header>
+  <h1>瑞穗避難路線</h1>
+  <p class="hint" id="upd">資料載入中…</p>
+</header>
+<div id="status" class="calm">即時警戒載入中…</div>
+<main>
+  <div id="map" aria-label="瑞穗避難地圖"></div>
+  <section class="panel">
+    <h2>從你家到避難處所</h2>
+    <p class="hint">在地圖上點你家的位置，或用手機定位（只在你的手機上計算，不會上傳）。路線會盡量避開土石流潛勢溪流影響範圍和封閉道路。</p>
+    <button class="btn" id="locate">📍 用我現在的位置</button>
+    <h3>哪一種災害？</h3>
+    <div class="seg" role="group" aria-label="災害類型">
+      <button data-hz="土石流" aria-pressed="true">土石流・颱風豪雨</button>
+      <button data-hz="水災" aria-pressed="false">水災</button>
+      <button data-hz="震災" aria-pressed="false">地震</button>
+    </div>
+    <h3>怎麼去？</h3>
+    <div class="seg" role="group" aria-label="交通方式">
+      <button data-mode="drive" aria-pressed="true">開車</button>
+      <button data-mode="walk" aria-pressed="false">走路</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="weak"> 有長輩、行動不便者同行（只找適合安置的處所）</label>
+    <div class="legend">
+      <span><i style="background:var(--safe)"></i>建議路線</span>
+      <span><i style="background:var(--fast);opacity:.8"></i>最快但經過危險範圍</span>
+      <span><b style="background:var(--deb)"></b>土石流影響範圍</span>
+    </div>
+    <div id="result"><p class="hint">還沒選位置。</p></div>
+
+    <h3>怎麼算的、要注意什麼</h3>
+    <ul class="hint">
+      <li>路線經過<b>土石流潛勢溪流影響範圍</b>的路段，計算時當成 5 倍遠；該溪流發布<b>黃色警戒</b>時當成 10 倍遠，<b>紅色警戒</b>時不走。</li>
+      <li>公路局通報<b>阻斷、坍方、雙向封閉</b>的路段不走；只封單一車道或調撥通行的列為「注意」。目前只有省道事件，鄉道、產業道路的封閉資料沒有開放，請以現場為準。</li>
+      <li><b>沒有納入淹水潛勢</b>：找不到花蓮縣淹水潛勢圖的公開下載檔。秀姑巒溪、富源溪沿岸低窪處豪雨時請特別留意。</li>
+      <li>避難處所是否開設由鄉公所決定，<b>出發前請先確認</b>（瑞穗鄉公所 03-8872700 或村長通知）。</li>
+      <li>道路來自 OpenStreetMap，部分產業道路、便道可能沒有；時間為估計值。</li>
+    </ul>
+    <h3>資料來源</h3>
+    <ul class="src">
+      <li>農業部農村發展及水土保持署：115 年度土石流潛勢溪流影響範圍圖、土石流及大規模崩塌警戒資料（政府資料開放平臺 176526、148402、7284）。</li>
+      <li>花蓮縣政府：避難收容所位置及收容人數（159491）；內政部消防署：避難收容處所點位檔（73242）。</li>
+      <li>交通部 TDX：公路局即時路況事件。交通部中央氣象署：天氣特報（W-C0033-001）。</li>
+      <li>內政部國土測繪中心：臺灣通用電子地圖（底圖）、村里界圖。© OpenStreetMap contributors：道路網。</li>
+    </ul>
+    <p class="hint"><a href="index.html">瑞穗就醫地圖</a>・<a href="farm.html">農事天氣窗</a>・製作：@tzengchangfu</p>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const hav=(a,b)=>{const R=6371000,t=Math.PI/180,x=Math.sin((b[0]-a[0])*t/2)**2+Math.cos(a[0]*t)*Math.cos(b[0]*t)*Math.sin((b[1]-a[1])*t/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+const WALK=4000/60; // 公尺/分
+const S={hz:null, al:null, hazard:"土石流", mode:"drive", weak:false, home:null, adj:null, blocked:new Set(), caution:new Set(), alertLevel:{}};
+
+const map=L.map("map",{preferCanvas:true}).setView([23.52,121.38],12);
+L.tileLayer("https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}",{maxZoom:19,
+  attribution:'底圖：<a href="https://maps.nlsc.gov.tw/">內政部國土測繪中心</a>｜道路 © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+const debLayer=L.layerGroup().addTo(map), shLayer=L.layerGroup().addTo(map), evLayer=L.layerGroup().addTo(map), routeLayer=L.layerGroup().addTo(map);
+let hereMarker=null;
+
+// ---------- 最小堆積 Dijkstra ----------
+function dijkstra(src, weight){
+  const n=S.hz.nodes.length, dist=new Float64Array(n).fill(Infinity), prev=new Int32Array(n).fill(-1), pe=new Int32Array(n).fill(-1);
+  const heap=[[0,src]]; dist[src]=0;
+  const push=x=>{heap.push(x);let i=heap.length-1;while(i>0){const p=(i-1)>>1;if(heap[p][0]<=heap[i][0])break;[heap[p],heap[i]]=[heap[i],heap[p]];i=p;}};
+  const pop=()=>{const top=heap[0],last=heap.pop();if(heap.length){heap[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<heap.length&&heap[l][0]<heap[m][0])m=l;if(r<heap.length&&heap[r][0]<heap[m][0])m=r;if(m===i)break;[heap[m],heap[i]]=[heap[i],heap[m]];i=m;}}return top;};
+  while(heap.length){
+    const [d,u]=pop(); if(d>dist[u]) continue;
+    for(const [v,ei] of S.adj[u]){
+      const w=weight(ei); if(!isFinite(w)) continue;
+      if(d+w<dist[v]){dist[v]=d+w;prev[v]=u;pe[v]=ei;push([dist[v],v]);}
+    }
+  }
+  return {dist,prev,pe};
+}
+function baseCost(ei){ const e=S.hz.edges[ei]; return S.mode==="walk" ? e[2]/WALK*60 : e[3]; } // 秒
+function safeCost(ei){
+  if(S.blocked.has(ei)) return Infinity;
+  const e=S.hz.edges[ei]; let c=baseCost(ei);
+  for(const no of e[4]){ const lv=S.alertLevel[no]; if(lv==="red") return Infinity; c*= lv==="yellow"?10:5; }
+  return c;
+}
+function fastCost(ei){ return S.blocked.has(ei) ? Infinity : baseCost(ei); }
+function path(res, target){
+  const eis=[]; let v=target; while(res.prev[v]!==-1){eis.push(res.pe[v]); v=res.prev[v];} return eis.reverse();
+}
+function pathInfo(eis, startNode){
+  let sec=0, m=0; const deb=new Set(), coords=[]; let cur=startNode, caution=false;
+  for(const ei of eis){
+    const e=S.hz.edges[ei]; sec+=baseCost(ei); m+=e[2]; e[4].forEach(x=>deb.add(x)); if(S.caution.has(ei)) caution=true;
+    let c=e[5]; if(e[0]!==cur) c=[...c].reverse(); cur = e[0]===cur ? e[1] : e[0];
+    coords.push(...(coords.length?c.slice(1):c));
+  }
+  return {min:sec/60, m, deb:[...deb], coords, caution};
+}
+
+// ---------- 主要計算 ----------
+function nearestNode(lat,lon){
+  let best=-1,bd=Infinity; S.hz.nodes.forEach((p,i)=>{const d=(p[0]-lat)**2+((p[1]-lon)*0.917)**2; if(d<bd){bd=d;best=i;}});
+  return {i:best, m:Math.sqrt(bd)*111000};
+}
+function inDebris(lat,lon){
+  const inside=(pt,ring)=>{let c=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [yi,xi]=ring[i],[yj,xj]=ring[j];if(((yi>pt[0])!==(yj>pt[0]))&&(pt[1]<(xj-xi)*(pt[0]-yi)/(yj-yi)+xi))c=!c;}return c;};
+  return S.hz.debris.filter(d=>d.poly.some(r=>inside([lat,lon],r)));
+}
+function plan(){
+  routeLayer.clearLayers();
+  const box=document.getElementById("result");
+  if(!S.home){ box.innerHTML='<p class="hint">還沒選位置。</p>'; return; }
+  const {lat,lon}=S.home, nn=nearestNode(lat,lon);
+  if(nn.m>3000){ box.innerHTML='<p class="banner warn">這個位置不在瑞穗附近的計算範圍內。</p>'; return; }
+  const safe=dijkstra(nn.i, safeCost), fast=dijkstra(nn.i, fastCost);
+  const cands=S.hz.shelters.filter(s=>s.types.includes(S.hazard) && (!S.weak||s.weak));
+  const rows=cands.map(s=>({s, cost:safe.dist[s.node]})).filter(x=>isFinite(x.cost)).sort((a,b)=>a.cost-b.cost).slice(0,3);
+  let html="";
+  const mine=inDebris(lat,lon);
+  if(mine.length){
+    const red=mine.some(d=>S.alertLevel[d.no]==="red"), yel=mine.some(d=>S.alertLevel[d.no]==="yellow");
+    html+=`<div class="banner ${red||yel?"no":"warn"}">你點的位置在土石流潛勢溪流影響範圍內（${esc([...new Set(mine.map(d=>d.no))].join("、"))}）。${red?"目前紅色警戒，請立即依指示撤離。":yel?"目前黃色警戒，請準備撤離。":"颱風、豪雨時請提早撤離，不要等到紅色警戒。"}</div>`;
+  }
+  if(nn.m>300) html+=`<p class="tag warn">你點的位置離最近的道路約 ${Math.round(nn.m)} 公尺，以下從路邊起算</p>`;
+  if(!rows.length){
+    html+=`<p class="banner warn">找不到可到達、適用「${esc(S.hazard)}」的避難處所${S.weak?"（已限定適合行動不便者）":""}。請撥 119 或聯絡村長。</p>`;
+    box.innerHTML=html; return;
+  }
+  html+=`<h3>最近的避難處所（${S.mode==="walk"?"走路":"開車"}）</h3>`;
+  const homeDeb=new Set(mine.map(d=>d.no));
+  rows.forEach((r,k)=>{
+    const sp=pathInfo(path(safe,r.s.node), nn.i), fp=pathInfo(path(fast,r.s.node), nn.i);
+    // 出發點所在的範圍避不開，不算在「經過」裡
+    const spOther=sp.deb.filter(x=>!homeDeb.has(x)), fpOther=fp.deb.filter(x=>!homeDeb.has(x));
+    const differ = fpOther.length>0 && spOther.length===0;
+    const tags=[];
+    if(spOther.length) tags.push(`<span class="tag warn">仍須經過 ${esc(spOther.join("、"))}</span>`);
+    else if(homeDeb.size) tags.push('<span class="tag ok">離開所在範圍後，不再經過其他土石流範圍</span>');
+    else tags.push('<span class="tag ok">不經過土石流影響範圍</span>');
+    if(differ) tags.push(`<span class="tag no">最快路線會經過 ${esc(fpOther.join("、"))}，已改走較安全的路（多 ${Math.max(1,Math.round(sp.min-fp.min))} 分）</span>`);
+    if(sp.caution||fp.caution) tags.push('<span class="tag warn">沿途有道路施工或管制</span>');
+    if(r.s.in_debris && r.s.in_debris.length) tags.push(`<span class="tag no">處所本身位在 ${esc(r.s.in_debris.join("、"))} 範圍內</span>`);
+    if(r.s.weak) tags.push('<span class="tag ok">適合行動不便者</span>');
+    html+=`<div class="card" data-k="${k}"><div class="row"><span class="name">${esc(r.s.name)}</span><span class="min">${Math.max(1,Math.round(sp.min))} 分</span></div>
+      <div class="sub">${esc(r.s.addr)}・約 ${(sp.m/1000).toFixed(1)} 公里${r.s.cap?`・可收容約 ${r.s.cap} 人`:""}${r.s.tel?`・<a href="tel:${esc(r.s.tel.replace(/[^\d]/g,""))}">${esc(r.s.tel)}</a>`:""}</div>
+      <div>${tags.join("")}</div></div>`;
+    const color=k===0?css("--safe"):"#4d9e6a";
+    if(differ && k===0) L.polyline(fp.coords,{color:css("--fast"),weight:5,opacity:.7,dashArray:"8 8"}).addTo(routeLayer);
+    L.polyline(sp.coords,{color,weight:k===0?7:4,opacity:k===0?.95:.6}).addTo(routeLayer);
+  });
+  html+=`<p class="hint">時間為估計值，不含塞車；颱風、豪雨中行車請放慢。</p>`;
+  box.innerHTML=html;
+  const first=pathInfo(path(safe,rows[0].s.node), nn.i);
+  if(first.coords.length) map.fitBounds(L.latLngBounds([...first.coords,[lat,lon]]),{padding:[30,30]});
+  box.querySelectorAll(".card").forEach(el=>el.addEventListener("click",()=>{const s=rows[+el.dataset.k].s; map.setView([s.lat,s.lon],16);}));
+}
+function pick(lat,lon){
+  S.home={lat,lon};
+  if(hereMarker) map.removeLayer(hereMarker);
+  hereMarker=L.marker([lat,lon],{icon:L.divIcon({className:"",iconSize:[20,20],html:'<div class="youarehere" style="width:20px;height:20px"></div>'})}).addTo(map);
+  plan();
+}
+map.on("click",e=>pick(e.latlng.lat,e.latlng.lng));
+document.getElementById("locate").addEventListener("click",()=>{
+  if(!navigator.geolocation){alert("這支手機不支援定位，請直接點地圖。");return;}
+  navigator.geolocation.getCurrentPosition(p=>{map.setView([p.coords.latitude,p.coords.longitude],15);pick(p.coords.latitude,p.coords.longitude);},
+    ()=>alert("無法取得位置，請直接點地圖。"),{enableHighAccuracy:true,timeout:10000});
+});
+document.querySelectorAll("[data-hz]").forEach(b=>b.addEventListener("click",()=>{S.hazard=b.dataset.hz;document.querySelectorAll("[data-hz]").forEach(x=>x.setAttribute("aria-pressed",x===b));drawShelters();plan();}));
+document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>{S.mode=b.dataset.mode;document.querySelectorAll("[data-mode]").forEach(x=>x.setAttribute("aria-pressed",x===b));plan();}));
+document.getElementById("weak").addEventListener("change",e=>{S.weak=e.target.checked;drawShelters();plan();});
+
+// ---------- 圖層 ----------
+function drawDebris(){
+  debLayer.clearLayers();
+  for(const d of S.hz.debris){
+    const lv=S.alertLevel[d.no], color=lv==="red"?css("--red"):lv==="yellow"?css("--yel"):css("--deb");
+    d.poly.forEach(r=>L.polygon(r,{color,weight:2,fillOpacity:lv?.45:.25}).bindPopup(
+      `<b>土石流潛勢溪流 ${esc(d.no)}</b><br>${esc(d.town)}${esc(d.vill)}・風險：${esc(d.risk)}・保全住戶 ${esc(d.hh)} 戶${lv?`<br><b>目前${lv==="red"?"紅色":"黃色"}警戒</b>`:""}`).addTo(debLayer));
+  }
+}
+function drawShelters(){
+  shLayer.clearLayers();
+  for(const s of S.hz.shelters){
+    const ok=s.types.includes(S.hazard)&&(!S.weak||s.weak);
+    L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",iconSize:[24,24],iconAnchor:[12,12],
+      html:`<div class="pin" style="width:24px;height:24px;background:${ok?"#1f7a3a":"#9aa3a0"}">避</div>`})})
+     .bindPopup(`<b>${esc(s.name)}</b><br>${esc(s.addr)}<br>適用：${esc(s.types.join("、"))}${s.cap?`<br>可收容約 ${s.cap} 人`:""}${s.weak?"<br>適合行動不便者":""}${s.tel?`<br>📞 <a href="tel:${esc(s.tel.replace(/[^\d]/g,""))}">${esc(s.tel)}</a>`:""}<br><span style="font-size:12px">資料：${esc(s.src)}</span>`)
+     .addTo(shLayer);
+  }
+}
+function applyAlerts(){
+  const al=S.al||{debris:[],roads:[],weather:[]};
+  S.alertLevel={};
+  for(const a of al.debris||[]) if(a.no && a.no!=="-"){ const cur=S.alertLevel[a.no]; if(a.level==="red"||!cur) S.alertLevel[a.no]=a.level; }
+  // 封閉事件：事件點 60 公尺內的路段
+  S.blocked=new Set(); S.caution=new Set(); evLayer.clearLayers();
+  for(const r of al.roads||[]){
+    for(const p of r.pts){
+      S.hz.edges.forEach((e,ei)=>{ if(e[5].some(c=>hav(c,p)<60)){ if(r.closure) S.blocked.add(ei); else if(r.caution) S.caution.add(ei);} });
+      L.marker(p,{icon:L.divIcon({className:"",iconSize:[24,24],iconAnchor:[12,12],html:`<div class="pin" style="width:24px;height:24px;background:${r.closure?"#b3261e":"#d4a106"}">${r.closure?"✕":"!"}</div>`})})
+        .bindPopup(`<b>${esc(r.title)}</b>${r.closure?"（道路不通）":"（注意通行）"}<br>${esc(r.desc)}`).addTo(evLayer);
+    }
+  }
+  // 頂部狀態
+  const st=document.getElementById("status"), parts=[];
+  const reds=(al.debris||[]).filter(a=>a.level==="red"), yels=(al.debris||[]).filter(a=>a.level==="yellow");
+  if(reds.length) parts.push(`<b>土石流紅色警戒</b>：${esc([...new Set(reds.map(a=>a.town+a.vill))].join("、"))}`);
+  if(yels.length) parts.push(`<b>土石流黃色警戒</b>：${esc([...new Set(yels.map(a=>a.town+a.vill))].join("、"))}`);
+  for(const w of al.weather||[]) parts.push(`<b>花蓮縣${esc(w.phenomena)}${esc(w.significance)}</b>`);
+  const closures=(al.roads||[]).filter(r=>r.closure), cautions=(al.roads||[]).filter(r=>!r.closure);
+  if(closures.length) parts.push(`<b>道路不通</b> ${closures.length} 處`);
+  if(cautions.length) parts.push(`道路施工／管制 ${cautions.length} 處（地圖上 ! 標示）`);
+  st.className = reds.length||closures.length ? "alert" : (yels.length||(al.weather||[]).length) ? "warn" : "calm";
+  st.innerHTML = (reds.length||yels.length||(al.weather||[]).length ? parts.join("　") : `目前瑞穗附近<b>沒有</b>土石流警戒或天氣特報。${parts.join("　")}`)
+    + `<br><span class="hint">即時資料更新：${esc((al.updated||"").replace("T"," "))}${(al.errors||[]).length?"（部分來源暫時無法取得："+esc(al.errors.join("、"))+"）":""}</span>`;
+}
+
+Promise.all([fetch("data/hazard.json").then(r=>r.json()), fetch("data/alerts.json").then(r=>r.json()).catch(()=>null)])
+.then(([hz,al])=>{
+  S.hz=hz; S.al=al;
+  S.adj=hz.nodes.map(()=>[]);
+  hz.edges.forEach((e,ei)=>{S.adj[e[0]].push([e[1],ei]); S.adj[e[1]].push([e[0],ei]);});
+  document.getElementById("upd").textContent=`土石流圖資：115 年度・避難處所 ${hz.shelters.length} 處・路網整理：${hz.built}`;
+  applyAlerts(); drawDebris(); drawShelters();
+}).catch(e=>{document.getElementById("upd").textContent="資料載入失敗，請稍後再試。";console.error(e);});
+</script>
+</body>
+</html>

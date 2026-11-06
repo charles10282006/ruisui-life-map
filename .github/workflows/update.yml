@@ -1,0 +1,82 @@
+# 瑞穗生活地圖：自動更新資料並發布到 GitHub Pages
+# - 每天台灣 06:00：就醫地圖（看診時段、院所、AED、客運、台鐵）＋天氣
+# - 每 3 小時：農事天氣窗、避難路線即時警戒
+# 某一項抓不到時保留上次的資料，網站照常發布。
+name: 更新並發布
+
+on:
+  schedule:
+    - cron: "0 22 * * *"          # UTC 22:00 = 台灣 06:00（每日項目）
+    - cron: "15 1,4,7,10,13,16,19 * * *"  # 其餘每 3 小時（只更新天氣與即時警戒）
+  workflow_dispatch:               # 也可以在 GitHub 網頁上手動執行
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ruisui-site
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      PYTHONIOENCODING: utf-8
+      TZ: Asia/Taipei
+      DAILY: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '0 22 * * *' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: 每日資料（就醫地圖）
+        if: env.DAILY == 'true'
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+        run: |
+          python site_src/ci_prepare.py || echo "::warning::村界下載失敗"
+          python scripts/fetch_daily.py      || echo "::warning::fetch_daily 失敗，沿用上次資料"
+          python scripts/build_facilities.py || echo "::warning::build_facilities 失敗，沿用上次資料"
+          python scripts/fetch_transit.py    || echo "::warning::fetch_transit 失敗，沿用上次資料"
+
+      - name: 天氣（農事天氣窗）
+        env:
+          CWA_API_KEY: ${{ secrets.CWA_API_KEY }}
+        run: python scripts/fetch_weather.py || echo "::warning::fetch_weather 失敗，沿用上次資料"
+
+      - name: 即時警戒（避難路線）
+        env:
+          CWA_API_KEY: ${{ secrets.CWA_API_KEY }}
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+        run: python scripts/fetch_alerts.py || echo "::warning::fetch_alerts 失敗，沿用上次資料"
+
+      - name: 把更新後的資料存回 GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/data data/geocode_cache.csv data/osm_poi.json
+          git diff --cached --quiet || git commit -m "自動更新資料 $(date '+%Y-%m-%d %H:%M')"
+          git push || echo "::warning::推送失敗（可能同時有手動更新），下次再試"
+
+      - name: 組合網站
+        run: python site_src/build_site.py
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>瑞穗生活地圖｜地形故事</title>
+<meta name="description" content="瑞穗生活地圖 #10：用 20 公尺網格地形資料看瑞穗的山、河、北回歸線與溫泉。">
+<style>
+:root{--bg:#f6f3ec;--card:#fffdf8;--ink:#26302b;--mute:#66706a;--line:#ded8c9;--green:#4f7a58;--brown:#9a6b3f;--blue:#2d6cb5;--red:#c2452d;--gold:#b8860b}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+nav.top{position:sticky;top:0;z-index:20;background:rgba(246,243,236,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+nav.top .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 16px;scrollbar-width:none}
+nav.top a{flex:none;font-size:14px;color:var(--mute);text-decoration:none;padding:4px 12px;border-radius:99px}
+nav.top a.on{background:var(--green);color:#fff}
+header.hero{padding:40px 0 20px}
+.tag{display:inline-block;font-size:13px;color:var(--green);border:1px solid var(--green);border-radius:99px;padding:1px 10px}
+h1{font-size:clamp(30px,8vw,44px);line-height:1.2;margin:12px 0 8px;letter-spacing:.02em}
+.lead{color:var(--mute);font-size:17px;margin:0 0 20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center}
+.stat b{display:block;font-size:clamp(17px,5vw,24px);color:var(--green);line-height:1.3}
+.stat span{font-size:12px;color:var(--mute);line-height:1.4;display:block}
+section.ch{padding:44px 0 8px;border-top:1px solid var(--line);margin-top:28px}
+.num{font-size:13px;color:var(--brown);letter-spacing:.15em}
+h2{font-size:clamp(24px,6.5vw,32px);margin:4px 0 12px;line-height:1.3}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:0 0 14px}
+.fig{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:18px 0}
+.fig svg,.fig canvas{display:block;width:100%;height:auto}
+.fig figcaption{font-size:13px;color:var(--mute);padding:8px 12px 10px;line-height:1.6;border-top:1px solid var(--line)}
+.maplab{font-weight:700;fill:#1c2420;paint-order:stroke;stroke:#fff;stroke-linejoin:round}
+.maplab.s{font-weight:600}
+.axis text{font-size:17px;fill:var(--mute)}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:14px}
+button.b{font:inherit;font-size:14px;border:1px solid var(--green);background:#fff;color:var(--green);border-radius:99px;padding:5px 14px;cursor:pointer}
+button.b.on{background:var(--green);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+th{background:#efe9da;font-weight:600}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;margin:14px 0}
+.tw table{min-width:0}
+.note{font-size:14px;color:var(--mute);background:#efe9da;border-left:4px solid var(--gold);padding:10px 14px;border-radius:0 10px 10px 0;margin:14px 0}
+.src{font-size:12px;color:var(--mute)}
+.reveal{opacity:0;transform:translateY(12px);transition:opacity .35s,transform .35s}
+.reveal.in{opacity:1;transform:none}
+#v3{position:relative;background:#cfe0ea;touch-action:pan-y}
+#v3.live{touch-action:none}
+#v3 canvas{width:100%;height:420px}
+.river-anim{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);transition:stroke-dashoffset 3s ease-out}
+.in .river-anim,.river-anim.go{stroke-dashoffset:0}
+.cards{display:grid;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card.ph{border-style:dashed;color:var(--mute)}
+.card b{display:block}
+footer{margin-top:56px;padding:28px 0 60px;background:#ebe5d6;border-top:1px solid var(--line)}
+footer h2{font-size:20px}
+footer ul{padding-left:20px;margin:6px 0 18px}
+footer li{margin-bottom:6px;font-size:14px}
+a{color:var(--blue)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);padding:6px 12px}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:4px}
+@media(min-width:700px){body{font-size:17px}}
+</style>
+</head>
+<body>
+<nav class="top"><div class="wrap">
+<a href="#top" data-k="top" class="on">首頁</a><a href="#land" data-k="land">地形</a><a href="#river" data-k="river">河流</a><a href="#tropic" data-k="tropic">北回歸線</a><a href="#spring" data-k="spring">溫泉</a><a href="#more" data-k="more">其他地圖</a><a href="#src" data-k="src">出處</a>
+</div></nav>
+
+<div class="wrap" id="top">
+<header class="hero">
+<span class="tag">瑞穗生活地圖 ‧ #10 首頁</span>
+<h1>瑞穗的地形故事</h1>
+<p class="lead">一個鄉，夾在兩列山脈之間，被一條大河切開，還有一條會慢慢移動的緯線經過。往下捲動，用內政部的 20 公尺網格地形資料看懂瑞穗。</p>
+<div class="stats">
+<div class="stat"><b>5–1017 m</b><span>瑞穗鄉範圍高程<br>（DTM 20 m）</span></div>
+<div class="stat"><b>68.6 km</b><span>秀姑巒溪<br>OSM 下游河段</span></div>
+<div class="stat"><b id="tdms">23°26′09″</b><span>北回歸線現今緯度<br>（公式計算）</span></div>
+</div>
+<p class="src">本頁為靜態介紹，不會自動更新。所有數字的來源與日期寫在每段與頁尾；查不到的會直接說查不到。</p>
+</header>
+</div>
+
+<div class="wrap">
+<!-- ============ 地形 ============ -->
+<section class="ch" id="land">
+<div class="num">01 ／ 地形</div>
+<h2>兩列山脈中間的谷地</h2>
+<p>瑞穗在花東縱谷中段。西邊是中央山脈，東邊是海岸山脈，中間一條平坦的谷地，就是瑞穗市區與大部分農地所在。下面是 20 公尺網格地形做出的陰影地形圖，白色細線是 11 個村的村界。</p>
+
+<figure class="fig reveal">
+<svg id="mapLocal" role="img" aria-label="瑞穗及周邊陰影地形圖"></svg>
+<div class="ctl"><button class="b on" id="tgVill">村界</button><button class="b" id="tgRiver">秀姑巒溪</button></div>
+<figcaption>地形：內政部地政司「全臺灣20公尺網格數值地形模型（DTM）」2025 年版花蓮縣圖幅（資料集 175239；本頁範圍內的 LiDAR 測製日期 2022-07 至 2023-10）。村界：國土測繪中心村（里）界 1150817 版。河道：© OpenStreetMap contributors。陰影為本頁自行計算，垂直誇大 2.2 倍，光源來自西北。灰色＝此版本檔案缺圖幅（非海）。</figcaption>
+</figure>
+
+<h3>切一刀看：從中央山脈到海岸山脈</h3>
+<p>沿北緯 23.4975°（瑞穗市區一帶）由西向東切一條剖面。左邊是中央山脈的稜線，往東急降到谷底，再爬上海岸山脈，最後入海。</p>
+<figure class="fig reveal">
+<svg id="chTransect" viewBox="0 0 700 300" role="img" aria-label="東西向地形剖面"></svg>
+<figcaption id="tcap">資料：同上 DTM，每 0.0005° 經度取樣（約 51 公尺）。垂直誇大約 5 倍（橫軸約 43 公里），故坡度看起來比實際陡。</figcaption>
+</figure>
+
+<h3>3D 地形</h3>
+<p>下面是可以轉動的 3D 地形（約 24 × 23 公里，白線為村界、藍線為秀姑巒溪）。手機上先按「開始操作」再拖曳，避免捲動頁面時被卡住。</p>
+<figure class="fig reveal">
+<div id="v3"><canvas id="c3"></canvas></div>
+<div class="ctl">
+<button class="b" id="live">開始操作 3D</button>
+<label>垂直誇大 <input type="range" id="ve" min="1" max="4" step="0.5" value="2"> <span id="vev">2×</span></label>
+</div>
+<figcaption>3D 網格由 20 公尺 DTM 平均成 60 公尺。貼圖為上方陰影圖。繪製使用 three.js（MIT 授權）。本頁沒有使用 MapLibre terrain-RGB 圖磚：該做法需要架設圖磚伺服器，靜態單檔頁面改用此方式。</figcaption>
+</figure>
+
+<div class="tw"><table>
+<tr><th>項目</th><th>數值</th><th>說明</th></tr>
+<tr><td>範圍內最高點</td><td>1017.0 m</td><td>奇美村，海岸山脈（121.4436°E, 23.4539°N）</td></tr>
+<tr><td>範圍內最低點</td><td>5.4 m</td><td>也在奇美村，秀姑巒溪河畔（121.4642°E, 23.4761°N）</td></tr>
+<tr><td>瑞穗村平均高程</td><td>92.7 m</td><td>谷地平原；範圍 76.8–109.1 m</td></tr>
+<tr><td>剖面上中央山脈側高點</td><td>約 3130 m</td><td>121.17°E 附近，已在瑞穗鄉外</td></tr>
+</table></div>
+<p class="src">以上為本頁以 DTM 20 m 網格對 11 村村界統計（統計日 2026-11-06）；DTM 是 20 公尺網格的取樣值，單點最高、最低可能與三角點或測站公告的標高不同。資料版本注意：2025 年版花蓮縣檔案在瑞穗東南方（海岸山脈南段，圖上灰色區）缺圖幅，瑞穗鄉本身 100% 有值。</p>
+</section>
+
+<!-- ============ 河流 ============ -->
+<section class="ch" id="river">
+<div class="num">02 ／ 河流</div>
+<h2>秀姑巒溪：往北流，再向東切穿海岸山脈</h2>
+<p>花東縱谷南段的水往北流。到了瑞穗附近，秀姑巒溪沒有繼續往北，而是轉向東，鑽進海岸山脈，彎彎曲曲地流到靜浦附近出海。這一段在奇美、瑞穗一帶形成著名的峽谷與曲流。</p>
+
+<figure class="fig reveal" id="figRiver">
+<svg id="mapReg" role="img" aria-label="秀姑巒溪河道圖"></svg>
+<div class="legend"><span><i style="background:#2d6cb5"></i>OSM 河道</span><span><i style="background:#e0402a;height:5px"></i>流經瑞穗鄉（300 公尺內）</span><span><i style="background:#999;height:10px;opacity:.6"></i>灰色＝此版本檔案缺圖幅（非海）</span></div>
+<figcaption>河道：© OpenStreetMap contributors，Overpass 查詢日 2026-11-06（way 75275722、761445358、1051537250，name＝秀姑巒溪）。底圖同前。</figcaption>
+</figure>
+
+<h3>河的縱剖面</h3>
+<figure class="fig reveal">
+<svg id="chRiver" viewBox="0 0 700 300" role="img" aria-label="秀姑巒溪縱剖面"></svg>
+<figcaption id="rcap"></figcaption>
+</figure>
+<div class="tw"><table>
+<tr><th>數字</th><th>值</th><th>來源與日期</th></tr>
+<tr><td>幹流長度（官方）</td><td>81.15 公里</td><td>經濟部水利署「秀姑巒溪」頁面，查閱 2026-11-06；發源於崙天山南麓（標高 2,360 公尺）</td></tr>
+<tr><td>流域面積（官方）</td><td>1,790.46 平方公里</td><td>同上</td></tr>
+<tr><td>本頁圖中河段長</td><td>68.6 公里</td><td>OSM 名為「秀姑巒溪」的最下游三段相接後在 EPSG:3826 投影量得；<b>不是</b>官方幹流全長，所以比 81.15 公里短</td></tr>
+<tr><td>河段高程</td><td id="relv"></td><td>DTM 2025 年版，取河道周圍 3×3 格最低值</td></tr>
+<tr><td>流經瑞穗鄉段</td><td id="rsec"></td><td>河道落在 11 村合併範圍外擴 300 公尺內的部分（村界 1150817）</td></tr>
+</table></div>
+<div class="note">限制：DTM 是地表或水面高程，河床、沙洲、橋梁處會有小起伏；圖中粗線是為了顯示趨勢，把「往下游只降不升」的包絡線畫出來，細線是原始取樣。河道是 OSM 志工繪製，位置可能與水利署河川公告線略有差異。</div>
+</section>
+
+<!-- ============ 北回歸線 ============ -->
+<section class="ch" id="tropic">
+<div class="num">03 ／ 北回歸線</div>
+<h2>那條緯線，其實在慢慢往南走</h2>
+<p>北回歸線的緯度等於地球自轉軸的傾角（黃赤交角）。這個角度目前每年變小約 0.47 角秒，換算成地面約 14 公尺，所以線在緩慢往南移。</p>
+
+<figure class="fig reveal">
+<svg id="mapTropic" role="img" aria-label="北回歸線與舞鶴標誌位置"></svg>
+<figcaption>紅線＝以公式算出的現今北回歸線緯度；星號＝OSM 上北回歸線標誌公園（舞鶴村）。村界以所在鄉鎮判斷。底圖同前。</figcaption>
+</figure>
+
+<div class="tw"><table>
+<tr><th>項目</th><th>數值</th><th>來源與日期</th></tr>
+<tr><td>現今緯度（本頁計算）</td><td id="tcalc"></td><td>IAU 2006 平均黃赤交角多項式（Capitaine et al. 2003, A&amp;A 412, 567），代入 2026-11-06</td></tr>
+<tr><td>2025 年約</td><td>23°26′18″</td><td>中研院人社中心 GIS 專題中心「北回歸線標塔的位置」，2025-06-21。與上列相差約 9″（約 280 公尺），我查不到該文的計算方式；可能與章動（±9″ 左右）有關，這只是推測</td></tr>
+<tr><td>2018 年約</td><td>23°26′10.5″</td><td>中文維基百科「北回歸線」（頁面引用，未註明原始天文曆）</td></tr>
+<tr><td>移動速率</td><td>每年約 −0.47″（約 14.4 公尺，向南）</td><td>同維基頁面；也等於上面公式的一次項 −46.84″／世紀</td></tr>
+<tr><td>瑞穗標誌（舞鶴）</td><td>23.46565°N, 121.35762°E<br>DTM 高程 220.6 m</td><td>OSM way 389517157「北回歸線標誌公園」多邊形中心（© OpenStreetMap contributors，2026-11-06）；落在花蓮縣瑞穗鄉舞鶴村（村界 1150817）。某論壇貼文寫約 23°27′55″N、121°21′28″E、海拔 226 m，與 OSM 相符，但論壇不是官方來源</td></tr>
+<tr><td>與現今線的距離</td><td id="tdist"></td><td>以上兩個緯度相減，1° ≈ 111 公里</td></tr>
+<tr><td>豐濱標誌（對照）</td><td>23.45136°N, 121.49624°E</td><td>OSM way 502119423；位於<b>豐濱鄉靜浦村</b>，不在瑞穗鄉</td></tr>
+<tr><td>水上標塔（對照）</td><td>23°27′04.51″N（1908 年黃赤交角值）</td><td>同上中研院文章：標塔數字反映的是 1908 年（Newcomb 太陽表）的數值</td></tr>
+</table></div>
+<div class="note">兩個查不到的地方：① 標誌的官方設置座標（我沒找到花蓮縣政府或觀光署的座標公文）；② 標誌「為何」比計算線偏北約 3 公里的原因。網路資料說瑞穗標誌原在瑞穗車站附近，約 1981 年因東部幹線工程遷到舞鶴台地，但這來自論壇與旅遊網站，未查到官方文件。標誌是紀念性地標，請以現場官方標示為準，不要用它對時。</div>
+</section>
+
+<!-- ============ 溫泉 ============ -->
+<section class="ch" id="spring">
+<div class="num">04 ／ 溫泉</div>
+<h2>瑞穗溫泉、紅葉溫泉、安通溫泉：先看清楚在哪個鄉</h2>
+<p>花東縱谷有好幾處溫泉，名字很像，行政區卻不同。這裡不用名字猜，而是把 OSM 點位放進村界圖，逐一判斷所在鄉鎮。</p>
+
+<figure class="fig reveal">
+<svg id="mapSpring" role="img" aria-label="溫泉位置圖"></svg>
+<figcaption>點位：© OpenStreetMap contributors（2026-11-06）。鄉鎮／村：以點位對國土測繪中心村界 1150817 做點在多邊形內判斷。</figcaption>
+</figure>
+
+<div class="tw"><table>
+<tr><th>地點（OSM 點）</th><th>所在鄉鎮／村</th><th>DTM 高程</th></tr>
+<tr><td>瑞穗溫泉區：瑞雄溫泉</td><td><b>瑞穗鄉</b> 瑞祥村</td><td>164 m</td></tr>
+<tr><td>瑞穗溫泉區：溫泉路沿線其他民宿（黃家、原鄉、山下的厝等）</td><td><b>瑞穗鄉</b> 瑞祥村</td><td>—</td></tr>
+<tr><td>瑞穗溫泉區西端：瑞穗溫泉旅社、OSM「瑞穗溫泉」點</td><td><b>萬榮鄉</b> 紅葉村（依村界判斷）</td><td>206 m（瑞穗溫泉旅社）</td></tr>
+<tr><td>紅葉溫泉（紅葉溫泉旅社）</td><td><b>萬榮鄉</b> 紅葉村，<b>不在瑞穗鄉</b></td><td>235.6 m</td></tr>
+<tr><td>安通溫泉（安通溫泉飯店）</td><td><b>玉里鎮</b> 樂合里，<b>不在瑞穗鄉</b></td><td>185.1 m</td></tr>
+</table></div>
+<div class="note">所以「瑞穗溫泉」這個名字指的溫泉區，大部分在瑞穗鄉瑞祥村，但最西邊的幾個點依官方村界落在萬榮鄉紅葉村；紅葉溫泉、安通溫泉則完全在瑞穗鄉之外。我只查證「位置在哪個行政區」；水質、泉溫、營業狀況沒有查，請洽業者。OSM 點位為志工標註，靠近界線的點可能有幾十公尺誤差。</div>
+</section>
+
+<!-- ============ 其他地圖 ============ -->
+<section class="ch" id="more">
+<div class="num">05 ／ 其他地圖</div>
+<h2>瑞穗生活地圖系列</h2>
+<div class="cards">
+<div class="card ph"><b>#7 生活可近性</b>網址待補</div>
+<div class="card ph"><b>#8 通學距離</b>網址待補</div>
+<div class="card ph"><b>#9 稻作衛星</b>網址待補</div>
+<div class="card"><b>#10 地形故事圖（本頁）</b>系列首頁介紹</div>
+</div>
+</section>
+</div>
+
+<footer id="src"><div class="wrap">
+<h2>資料出處與授權</h2>
+<ul>
+<li><b>地形</b>：內政部地政司，「全臺灣20公尺網格數值地形模型DTM資料」2025 年版（<a href="https://data.gov.tw/dataset/175239">data.gov.tw 資料集 175239</a>；資料集上架 2025-10-29、詮釋資料更新 2026-02-25）。實際使用：TGOS 提供之「分幅_花蓮縣20MDEM(2025)」，TWD97[2020]／TWVD2001，2026-11-06 下載。授權：<b>政府資料開放授權條款第1版</b>。</li>
+<li><b>村界</b>：國土測繪中心「村（里）界」1150817 版（本機檔 VILLAGE_NLSC_1150817）。授權條款本次未逐項查證。</li>
+<li><b>河道、地標位置</b>：© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>（ODbL），Overpass API，2026-11-06。</li>
+<li><b>秀姑巒溪長度、流域面積</b>：經濟部水利署「秀姑巒溪」河川基本資料頁（<a href="https://www.wra.gov.tw/cp.aspx?n=3310">wra.gov.tw</a>），查閱 2026-11-06。政府網頁內容，授權另依該網站公告。</li>
+<li><b>北回歸線</b>：<a href="https://gis.rchss.sinica.edu.tw/mapclub_20250621/">中研院人社中心 GIS 專題中心，2025-06-21</a>；<a href="https://zh.wikipedia.org/zh-tw/北回歸線">中文維基百科「北回歸線」</a>（CC BY-SA）；Capitaine, Wallace &amp; Chapront (2003), A&amp;A 412, 567–586（黃赤交角公式）。</li>
+<li><b>程式庫</b>：three.js r128（MIT）。</li>
+<li>本頁沒有使用照片。</li>
+</ul>
+<p class="src">本頁由作者以公開資料自行製作，供居民參考，非官方地圖；高程為 20 公尺網格取樣值，座標與行政區判斷如有疑義以主管機關公告為準。</p>
+</div></footer>
+
+<script src="assets/data.js"></script>
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script>
+(function(){
+const D=window.MAP, NS='http://www.w3.org/2000/svg';
+const $=s=>document.querySelector(s);
+function el(n,a,p,t){const e=document.createElementNS(NS,n);for(const k in a||{})e.setAttribute(k,a[k]);if(t!=null)e.textContent=t;if(p)p.appendChild(e);return e}
+const pts=r=>r.map(p=>p[0]+','+p[1]).join(' ');
+const dms=d=>{const s=d*3600;return Math.floor(s/3600)+'°'+String(Math.floor(s%3600/60)).padStart(2,'0')+'′'+(s%60).toFixed(1).padStart(4,'0')+'″'};
+
+/* tropic numbers */
+const T=D.tropic;
+$('#tdms').textContent='23°26′09″';
+$('#tcalc').innerHTML='<b>'+dms(T.deg)+'</b>（'+T.deg.toFixed(5)+'°N）';
+const mk=23.46565, fb=23.45136;
+$('#tdist').innerHTML='舞鶴標誌在計算線以北約 <b>'+((mk-T.deg)*111).toFixed(1)+' 公里</b>；豐濱標誌約 '+((fb-T.deg)*111).toFixed(1)+' 公里';
+
+/* base map helper */
+function baseMap(svg,img,w,h,vb){svg.setAttribute('viewBox',vb||('0 0 '+w+' '+h));el('image',{href:img,x:0,y:0,width:w,height:h},svg)}
+const U=svg=>((svg.ownerSVGElement||svg).viewBox.baseVal.width||1300)/340; // viewBox units per CSS px on a phone
+function lab(svg,x,y,t,cls,anchor){const u=U(svg),f=(cls&&cls.indexOf('x')>=0?9.5:cls&&cls.indexOf('s')>=0?11.5:14)*u;return el('text',{x:x,y:y,class:'maplab '+(cls||''),'text-anchor':anchor||'middle','font-size':f,'stroke-width':f*0.28},svg,t)}
+function dot(svg,x,y,c,r){const u=U(svg);el('circle',{cx:x,cy:y,r:(r||6)*u,fill:c,stroke:'#fff','stroke-width':2*u},svg)}
+
+/* ---- local map ---- */
+const L=D.local, ml=$('#mapLocal');
+baseMap(ml,'assets/hill_local.jpg',L.w,L.h);
+const gV=el('g',{},ml), gR=el('g',{style:'display:none'},ml);
+D.villages.forEach(v=>{v.rings.forEach(r=>el('polygon',{points:pts(r),fill:'none',stroke:'#fff','stroke-width':1.2*U(ml),opacity:.9},gV));lab(gV,v.label[0],v.label[1],v.name.replace('村',''),'s x')});
+el('polyline',{points:pts(D.river.path_local),fill:'none',stroke:'#2d6cb5','stroke-width':2.6*U(ml),'stroke-linejoin':'round'},gR);
+lab(ml,L.w*0.2,L.h*0.08,'中央山脈','');lab(ml,L.w*0.82,L.h*0.2,'海岸山脈','');lab(ml,L.w*0.4,L.h*0.45,'花東縱谷','');
+$('#tgVill').onclick=e=>{const b=e.target;b.classList.toggle('on');gV.style.display=b.classList.contains('on')?'':'none'};
+$('#tgRiver').onclick=e=>{const b=e.target;b.classList.toggle('on');gR.style.display=b.classList.contains('on')?'':'none'};
+
+/* ---- charts ---- */
+function chart(svg,o){ // o:{x:[min,max],y:[min,max],xt,yt,series:[{pts,stroke,w,fill,op}],bands,notes}
+ const W=700,H=300,m={l:46,r:26,t:16,b:34};
+ const sx=v=>m.l+(v-o.x[0])/(o.x[1]-o.x[0])*(W-m.l-m.r), sy=v=>H-m.b-(v-o.y[0])/(o.y[1]-o.y[0])*(H-m.t-m.b);
+ const ax=el('g',{class:'axis'},svg);
+ o.yt.forEach(v=>{el('line',{x1:m.l,x2:W-m.r,y1:sy(v),y2:sy(v),stroke:'#e4dfd0'},ax);el('text',{x:m.l-6,y:sy(v)+4,'text-anchor':'end'},ax,v)});
+ o.xt.forEach(v=>{el('text',{x:sx(v[0]),y:H-12,'text-anchor':'middle'},ax,v[1])});
+ (o.bands||[]).forEach(b=>el('rect',{x:sx(b[0]),width:sx(b[1])-sx(b[0]),y:m.t,height:H-m.t-m.b,fill:b[2],opacity:.18},svg));
+ o.series.forEach(s=>{
+  const p=s.pts.map(q=>sx(q[0]).toFixed(1)+','+sy(q[1]).toFixed(1));
+  if(s.fill){const b=sy(o.y[0]);el('polygon',{points:sx(s.pts[0][0])+','+b+' '+p.join(' ')+' '+sx(s.pts[s.pts.length-1][0])+','+b,fill:s.fill,opacity:s.op||.5},svg)}
+  el('polyline',{points:p.join(' '),fill:'none',stroke:s.stroke,'stroke-width':s.w||2,'stroke-linejoin':'round',opacity:s.lo||1},svg);
+ });
+ (o.notes||[]).forEach(n=>{el('text',{x:sx(n[0]),y:sy(n[1]),'text-anchor':n[3]||'middle',class:'maplab s','font-size':19,'stroke-width':5},svg,n[2])});
+ return {sx,sy};
+}
+/* transect */
+(function(){
+ const d=D.transect.data.filter(q=>q[1]!=null&&q[0]>=121.1);
+ const max=Math.max.apply(null,d.map(q=>q[1]));
+ const yMax=Math.ceil(max/500)*500;
+ const vv=d.filter(q=>q[0]>121.33&&q[0]<121.41);const val=vv.reduce((a,b)=>b[1]<a[1]?b:a);
+ const ee=d.filter(q=>q[0]>121.42);const eg=ee.reduce((a,b)=>b[1]>a[1]?b:a);
+ const wp=d.filter(q=>q[0]<121.3).reduce((a,b)=>b[1]>a[1]?b:a);
+ chart($('#chTransect'),{x:[121.1,121.52],y:[0,yMax],xt:[[121.1,'121.10°E'],[121.2,'121.20'],[121.3,'121.30'],[121.4,'121.40'],[121.5,'121.50']],yt:d3(yMax),
+  series:[{pts:d,stroke:'#5b4636',w:1.6,fill:'#9a7752',op:.55}],
+  bands:[[121.33,121.41,'#4f7a58']],
+  notes:[[wp[0]+0.012,wp[1]-30,'中央山脈 '+Math.round(wp[1])+' m','middle'],[val[0],val[1]+420,'縱谷谷底 '+Math.round(val[1])+' m','middle'],[eg[0],eg[1]+180,'海岸山脈 '+Math.round(eg[1])+' m','middle']]});
+ function d3(m){const a=[];for(let v=0;v<=m;v+=m/4)a.push(v);return a}
+})();
+/* river profile */
+(function(){
+ const R=D.river,dk=R.d_km;
+ const raw=dk.map((x,i)=>[x,R.el[i]]),mono=dk.map((x,i)=>[x,R.mono[i]]);
+ const s0=R.section_km[0],s1=R.section_km[1];
+ const c=chart($('#chRiver'),{x:[0,Math.ceil(R.length_km/10)*10],y:[0,300],xt:[0,10,20,30,40,50,60,70].filter(v=>v<=R.length_km+5).map(v=>[v,v+' km']),yt:[0,100,200,300],
+  series:[{pts:raw,stroke:'#8fb2d9',w:1,lo:.9},{pts:mono,stroke:'#2d6cb5',w:2.4,fill:'#2d6cb5',op:.18}],
+  bands:[[s0,s1,'#e0402a']],
+  notes:[[(s0+s1)/2,40,'流經瑞穗鄉','middle'],[2,285,'上游（南）','start'],[R.length_km-1,285,'出海口（東）','end']]});
+ $('#relv').textContent='起點約 '+Math.round(R.el[0])+' m → 河口約 '+Math.round(R.el[R.el.length-1])+' m；平均坡降約 '+((R.el[0]-R.el[R.el.length-1])/R.length_km).toFixed(1)+' m／km';
+ const i0=dk.findIndex(x=>x>=s0),i1=dk.findIndex(x=>x>=s1);
+ $('#rsec').textContent='河段里程 '+s0+'–'+s1+' km（約 '+(s1-s0).toFixed(1)+' km），高程約 '+Math.round(R.el[i0])+' m → '+Math.round(R.el[i1])+' m';
+ $('#rcap').textContent='橫軸：OSM 河段由上游（南端，約 23.137°N）起算的距離；縱軸：沿河每 100 公尺取樣的 DTM 高程。上游起點高程約 '+Math.round(R.el[0])+' m，不是水源。資料：DTM 2025 年版、OSM（2026-11-06）。';
+ /* region map */
+ const G=D.reg,m=$('#mapReg');baseMap(m,'assets/hill_reg.jpg',G.w,G.h);
+ D.union_reg.forEach(r=>el('polygon',{points:pts(r),fill:'#e0402a','fill-opacity':.18,stroke:'#e0402a','stroke-width':1.2*U(m)},m));
+ const path=D.river.path_reg;
+ const full=el('polyline',{points:pts(path),fill:'none',stroke:'#2d6cb5','stroke-width':2.2*U(m),class:'river-anim'},m);
+ const a=Math.round(s0*10),b=Math.round(s1*10);
+ const sec=el('polyline',{points:pts(path.slice(i0,i1+1)),fill:'none',stroke:'#e0402a','stroke-width':3.4*U(m),'stroke-linecap':'round'},m);
+ const len=full.getTotalLength?full.getTotalLength():3000;full.style.setProperty('--len',len);
+ lab(m,G.w*.1,G.h*.12,'中央山脈');lab(m,G.w*.62,G.h*.1,'海岸山脈');
+ lab(m,path[0][0]+70,path[0][1]-14,'起點（南）','s');
+ lab(m,path[path.length-1][0]-6,path[path.length-1][1]-16,'出海口','s','end');
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){full.classList.add('go')}}),{threshold:.3});io.observe($('#figRiver'));
+})();
+
+/* tropic map */
+(function(){
+ const m=$('#mapTropic');baseMap(m,'assets/hill_local.jpg',L.w,L.h,'200 760 1000 480');
+ D.villages.forEach(v=>v.rings.forEach(r=>el('polygon',{points:pts(r),fill:'none',stroke:'#fff','stroke-width':1.1*U(m),opacity:.9},m)));
+ el('polyline',{points:pts(D.river.path_local),fill:'none',stroke:'#2d6cb5','stroke-width':2.2*U(m)},m);
+ const y=T.y_local;
+ const ln=el('line',{x1:0,x2:L.w,y1:y-60,y2:y-60,stroke:'#e0402a','stroke-width':2.4*U(m),'stroke-dasharray':(10*U(m))+' '+(6*U(m))},m);
+ ln.style.transition='all 2.2s ease-out';
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){ln.setAttribute('y1',y);ln.setAttribute('y2',y)}}),{threshold:.35});io.observe(m);
+ const u=U(m);lab(m,210+10*u,y+26*u,'現今北回歸線 '+dms(T.deg),'s','start');
+ const p=D.poi_local.marker;
+ el('path',{d:'M'+p[0]+','+(p[1]-13)+'l4,9 10,1 -8,6 3,10 -9,-6 -9,6 3,-10 -8,-6 10,-1z',fill:'#e0a800',stroke:'#fff','stroke-width':2,transform:'translate('+p[0]+' '+p[1]+') scale('+(U(m)*0.9)+') translate('+(-p[0])+' '+(-p[1])+')'},m);
+ lab(m,p[0]+14*u,p[1]-22*u,'舞鶴・北回歸線標誌公園','s','start');
+ lab(m,p[0]+14*u,p[1]-6*u,'（瑞穗鄉舞鶴村，高程約 221 m）','s','start');
+ const f=D.poi_local.fengbin;dot(m,f[0],f[1],'#e0a800',6);lab(m,f[0]+6*u,f[1]-14*u,'豐濱標誌（非瑞穗）','s','end');
+ el('line',{x1:p[0],x2:p[0],y1:p[1]+34*u,y2:y,stroke:'#fff','stroke-width':1.2*U(m),'stroke-dasharray':(4*U(m))+' '+(4*U(m))},m);
+ lab(m,p[0]+8*u,(p[1]+y)/2+20*u,'約 '+((mk-T.deg)*111).toFixed(1)+' 公里','s','start');
+})();
+
+/* spring map */
+(function(){
+ const m=$('#mapSpring'),G=D.reg,P=D.poi_reg;
+ const x0=P.hongye[0]-170,x1=P.ruisuiHS[0]+260,y0=P.ruisuiHS[1]-150,y1=P.antong[1]+110;
+ baseMap(m,'assets/hill_reg.jpg',G.w,G.h,x0+' '+y0+' '+(x1-x0)+' '+(y1-y0));
+ D.union_reg.forEach(r=>el('polygon',{points:pts(r),fill:'#fff','fill-opacity':.14,stroke:'#fff','stroke-width':2*U(m)},m));
+ lab(m,x1-10*U(m),y0+24*U(m),'瑞穗鄉（白框）','s','end');
+ const pin=(k,c,t,dx,dy,an)=>{const p=P[k],u=U(m);dot(m,p[0],p[1],c,8);lab(m,p[0]+dx*u,p[1]+dy*u,t,'s',an||'start')};
+ pin('ruisuiHS','#2d8a4a','瑞穗溫泉（瑞穗鄉瑞祥村）',16,-10);
+ pin('hongye','#c2452d','紅葉溫泉（萬榮鄉）',-16,24,'end');
+ pin('antong','#c2452d','安通溫泉（玉里鎮）',16,5);
+ const u=U(m);el('rect',{x:x0+12*u,y:y1-50*u,width:12*u,height:12*u,fill:'#2d8a4a'},m);lab(m,x0+30*u,y1-39*u,'在瑞穗鄉內','s','start');
+ el('rect',{x:x0+12*u,y:y1-28*u,width:12*u,height:12*u,fill:'#c2452d'},m);lab(m,x0+30*u,y1-17*u,'不在瑞穗鄉','s','start');
+})();
+
+/* reveal + nav */
+const rv=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in')}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(e=>rv.observe(e));
+if(/[?&]static/.test(location.search)){document.querySelectorAll('.reveal').forEach(e=>e.classList.add('in'));document.querySelectorAll('.river-anim').forEach(e=>e.classList.add('go'))}
+const links={};document.querySelectorAll('nav.top a').forEach(a=>links[a.dataset.k]=a);
+const secs=['top','land','river','tropic','spring','more','src'].map(k=>[k,document.getElementById(k)]);
+function onScroll(){let cur='top';const y=innerHeight*0.35;secs.forEach(([k,e])=>{if(e&&e.getBoundingClientRect().top<y)cur=k});
+ Object.keys(links).forEach(k=>links[k].classList.toggle('on',k===cur));const a=links[cur];if(a&&a.scrollIntoView)a.parentElement.scrollTo({left:a.offsetLeft-20,behavior:'auto'})}
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+/* 3D */
+(function(){
+ const T3=D.t3d,cv=$('#c3');
+ let ren;try{ren=new THREE.WebGLRenderer({canvas:cv,antialias:true})}catch(e){cv.parentNode.innerHTML='<p style="padding:20px">此瀏覽器不支援 WebGL，無法顯示 3D。</p>';return}
+ ren.setPixelRatio(Math.min(devicePixelRatio||1,2));
+ const sc=new THREE.Scene();sc.background=new THREE.Color(0xcfe0ea);
+ const cam=new THREE.PerspectiveCamera(40,1,0.1,400);
+ const bin=atob(T3.heights),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+ const H=new Int16Array(u8.buffer);
+ const wk=(T3.E1-T3.E0)/1000,hk=(T3.N1-T3.N0)/1000;
+ const geo=new THREE.PlaneGeometry(wk,hk,T3.w-1,T3.h-1);
+ const pos=geo.attributes.position;
+ function setH(ve){for(let i=0;i<pos.count;i++)pos.setZ(i,Math.max(H[i],0)/1000*ve);pos.needsUpdate=true;geo.computeVertexNormals()}
+ setH(2);
+ const tex=new THREE.TextureLoader().load('data:image/jpeg;base64,'+T3.tex,()=>render());
+ tex.anisotropy=4;
+ const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tex}));
+ mesh.rotation.x=-Math.PI/2;sc.add(mesh);
+ cam.position.set(0,16,22);
+ const ctl=new THREE.OrbitControls(cam,cv);ctl.enableDamping=false;ctl.enabled=false;ctl.maxPolarAngle=Math.PI*0.47;ctl.minDistance=6;ctl.maxDistance=60;
+ function size(){const w=cv.parentNode.clientWidth;const h=Math.min(460,Math.max(300,w*0.9));ren.setSize(w,h,false);cv.style.height=h+'px';cam.aspect=w/h;cam.updateProjectionMatrix();render()}
+ function render(){ren.render(sc,cam)}
+ ctl.addEventListener('change',render);addEventListener('resize',size);size();
+ $('#live').onclick=function(){const on=!ctl.enabled;ctl.enabled=on;$('#v3').classList.toggle('live',on);this.classList.toggle('on',on);this.textContent=on?'鎖定（回到捲動）':'開始操作 3D'};
+ $('#ve').oninput=function(){$('#vev').textContent=this.value+'×';setH(+this.value);render()};
+ window.__r3=render;
+})();
+})();
+</script>
+</body>
+</html>

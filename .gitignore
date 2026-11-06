@@ -1,0 +1,53 @@
+# 白名單：預設全部不上傳，只放行網站需要的成品與程式。
+# 下載的原始資料、快取、論文草稿、金鑰都不會上傳。
+/*
+!/.gitignore
+!/.github/
+!/README.md
+!/requirements.txt
+!/update_daily.bat
+!/update_weather.bat
+!/update_alerts.bat
+!/scripts/
+!/site_src/
+!/web/
+
+# 每日更新要用的小型快取
+!/data/
+/data/*
+!/data/geocode_cache.csv
+!/data/geocode_overrides.csv
+!/data/osm_poi.json
+!/data/shelter_overrides.csv
+
+# #8 通學距離：成品＋更新程式
+!/08_通學距離/
+/08_通學距離/*
+!/08_通學距離/index.html
+!/08_通學距離/update.py
+!/08_通學距離/template.html
+!/08_通學距離/fetch_osm.py
+
+# #9 稻作衛星：成品＋更新程式（影像快取不上傳）
+!/09_稻作衛星/
+/09_稻作衛星/*
+!/09_稻作衛星/index.html
+!/09_稻作衛星/update.py
+!/09_稻作衛星/outputs.py
+!/09_稻作衛星/timelapse.gif
+!/09_稻作衛星/overlays/
+!/09_稻作衛星/data/
+/09_稻作衛星/data/*
+!/09_稻作衛星/data/data.js
+
+# #10 地形：成品（原始 DTM 不上傳）
+!/10_地形/
+/10_地形/*
+!/10_地形/index.html
+!/10_地形/assets/
+!/10_地形/lib/
+
+__pycache__/
+*.pyc
+*.env
+*.log
