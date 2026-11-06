@@ -34,9 +34,18 @@ h1{font-size:26px;margin:0 0 4px;letter-spacing:.04em}
 .tx em{font-style:normal;font-size:12.5px;color:var(--accent);font-weight:600;margin-top:3px}
 .go{font-size:26px;color:var(--mute);flex:none}
 footer{margin-top:28px;color:var(--mute);font-size:13px;line-height:1.7}
-footer h2{font-size:14px;color:var(--ink);margin:16px 0 4px}
-footer ul{margin:0;padding-left:18px}
+footer details{border-top:1px solid var(--line)}
+footer details:last-of-type{border-bottom:1px solid var(--line)}
+footer summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;
+  padding:12px 2px;font-size:15px;font-weight:600;color:var(--ink)}
+footer summary::-webkit-details-marker{display:none}
+footer summary::after{content:"＋";color:var(--mute);font-weight:400}
+footer details[open] summary::after{content:"－"}
+footer ul{margin:0 0 12px;padding-left:18px}
 footer a{color:var(--mute)}
+footer .built{margin:14px 0 0;text-align:center;font-size:12px}
+footer .copy{margin:28px -16px 0;padding-top:22px;border-top:1px solid var(--line);text-align:center;
+  font-size:15px;letter-spacing:.04em;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -61,20 +70,25 @@ footer a{color:var(--mute)}
 </nav>
 
 <footer>
-  <h2>使用說明</h2>
-  <ul>
-    <li>各頁資料都標有來源與更新日期，僅供參考。看診時段由院所自行登錄，出門前請先打電話確認。</li>
-    <li>開車與步行時間是用道路資料估算，不含塞車、等紅燈，實際時間可能較長。</li>
-    <li>本網站的程式與資料整理有使用 AI 輔助，已抽查比對原始資料，但沒有逐筆核對；發現錯誤歡迎告訴我。</li>
-  </ul>
-  <h2>資料來源</h2>
-  <ul>
-    <li>衛生福利部中央健康保險署、衛生福利部、內政部戶政司、內政部國土測繪中心、內政部地政司、交通部中央氣象署、交通部 TDX、公路局、教育部、花蓮縣政府等開放資料，依「政府資料開放授權條款第1版」使用。</li>
-    <li>地圖與道路：© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>。</li>
-    <li>衛星影像：Contains modified Copernicus Sentinel data。</li>
-    <li>各頁底部列有完整出處。</li>
-  </ul>
-  <p>網站更新：{{BUILT}}（台灣時間）</p>
+  <details>
+    <summary>使用說明</summary>
+    <ul>
+      <li>各頁資料都標有來源與更新日期，僅供參考。看診時段由院所自行登錄，出門前請先打電話確認。</li>
+      <li>開車與步行時間是用道路資料估算，不含塞車、等紅燈，實際時間可能較長。</li>
+      <li>本網站的程式與資料整理有使用 AI 輔助，已抽查比對原始資料，但沒有逐筆核對；發現錯誤歡迎告訴我。</li>
+    </ul>
+  </details>
+  <details>
+    <summary>資料來源</summary>
+    <ul>
+      <li>衛生福利部中央健康保險署、衛生福利部、內政部戶政司、內政部國土測繪中心、內政部地政司、交通部中央氣象署、交通部 TDX、公路局、教育部、花蓮縣政府等開放資料，依「政府資料開放授權條款第1版」使用。</li>
+      <li>底圖：內政部國土測繪中心 臺灣通用電子地圖；道路網：© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>。</li>
+      <li>衛星影像：Contains modified Copernicus Sentinel data；耕地範圍：© ESA WorldCover project（CC BY 4.0）。</li>
+      <li>各頁底部列有完整出處。</li>
+    </ul>
+  </details>
+  <p class="built">網站更新：{{BUILT}}（台灣時間）</p>
+  <p class="copy">© 2026 tzengchangfu</p>
 </footer>
 </main>
 </body>
