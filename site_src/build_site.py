@@ -31,7 +31,7 @@ PAGES = [
     dict(slug="rice", src="09_稻作衛星", entry="index.html",
          files=["index.html", "data/data.js", "timelapse.gif", "overlays/*.png"],
          title="稻作衛星", icon="🌾", desc="衛星影像看各村田區的綠度變化與縮時動畫", update="約每 5 天一張影像",
-         hidden=True),  # 2026-11-06：NDVI 公式錯誤（全算成 1.0），重算並驗證完再改回 False
+         hidden=False),  # 2026-11-06 曾因 NDVI 全算成 1.0 下架；修正重算後（森林約 0.85、市區約 0.56）重新上架
     dict(slug="terrain", src="10_地形", entry="index.html", files=["index.html", "assets/*", "lib/*"],
          title="地形故事", icon="⛰️", desc="3D 地形、秀姑巒溪、北回歸線、溫泉的位置", update="不需更新"),
 ]
