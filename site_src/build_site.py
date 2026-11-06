@@ -30,7 +30,8 @@ PAGES = [
          title="通學距離", icon="🎒", desc="各村到國中小、高中職的距離和開車、步行時間，學生數與學區", update="每學年更新"),
     dict(slug="rice", src="09_稻作衛星", entry="index.html",
          files=["index.html", "data/data.js", "timelapse.gif", "overlays/*.png"],
-         title="稻作衛星", icon="🌾", desc="衛星影像看各村田區的綠度變化與縮時動畫", update="約每 5 天一張影像"),
+         title="稻作衛星", icon="🌾", desc="衛星影像看各村田區的綠度變化與縮時動畫", update="約每 5 天一張影像",
+         hidden=True),  # 2026-11-06：NDVI 公式錯誤（全算成 1.0），重算並驗證完再改回 False
     dict(slug="terrain", src="10_地形", entry="index.html", files=["index.html", "assets/*", "lib/*"],
          title="地形故事", icon="⛰️", desc="3D 地形、秀姑巒溪、北回歸線、溫泉的位置", update="不需更新"),
 ]
@@ -68,7 +69,10 @@ def patch_html(path, slug):
         links = {"#7 生活可近性": ("../care/", "就醫地圖：診所、急診、AED、交通"),
                  "#8 通學距離": ("../school/", "各村到學校的距離與時間"),
                  "#9 稻作衛星": ("../rice/", "衛星看田區綠度變化")}
+        live = {p["slug"] for p in PAGES if not p.get("hidden")}
         for k, (href, d) in links.items():
+            if href.strip("./") not in live:
+                continue  # 未發布的頁面維持「網址待補」
             s = re.sub(rf'<div class="card ph"><b>{re.escape(k)}</b>網址待補</div>',
                        f'<a class="card" href="{href}" style="text-decoration:none;color:inherit"><b>{k}</b>{d}</a>', s)
     path.write_text(s, encoding="utf-8")
@@ -93,6 +97,9 @@ def main():
     OUT.mkdir()
     built = []
     for p in PAGES:
+        if p.get("hidden"):
+            print(f"暫不發布 {p['title']}（hidden=True）")
+            continue
         entry = ROOT / p["src"] / p["entry"]
         if not entry.exists():
             print(f"略過 {p['title']}：找不到 {p['src']}/{p['entry']}")
