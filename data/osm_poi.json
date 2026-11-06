@@ -2,7 +2,7 @@
   "version": 0.6,
   "generator": "Overpass API 0.7.62.11 87bfad18",
   "osm3s": {
-    "timestamp_osm_base": "2026-06-01T08:52:28Z",
+    "timestamp_osm_base": "2026-07-24T11:04:51Z",
     "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
   },
   "elements": [
@@ -904,7 +904,7 @@
     "official_name": "丁丁藥局吉安店",
     "opening_hours": "09:00-22:45",
     "operator": "諾貝兒寶貝股份有限公司",
-    "phone": "+886-3 853 6772",
+    "phone": "+886 3 853 6772",
     "shop": "chemist",
     "website": "https://www.norbelbaby.com.tw/"
   }
@@ -1012,6 +1012,7 @@
   "lon": 121.4495319,
   "tags": {
     "amenity": "clinic",
+    "healthcare": "clinic",
     "name": "劉明謙診所"
   }
 },
@@ -1182,8 +1183,8 @@
 {
   "type": "node",
   "id": 4221700902,
-  "lat": 23.9896166,
-  "lon": 121.6240329,
+  "lat": 23.9896187,
+  "lon": 121.6241302,
   "tags": {
     "amenity": "clinic",
     "healthcare": "clinic",
@@ -2150,8 +2151,8 @@
   "type": "way",
   "id": 420332037,
   "center": {
-    "lat": 23.7448736,
-    "lon": 121.4511502
+    "lat": 23.7449178,
+    "lon": 121.4512441
   },
   "tags": {
     "addr:city": "花蓮縣",
@@ -2236,7 +2237,7 @@
     "name:nan-Latn-pehoeji": "Tâi-pak Êng-bîn Chóng-pīⁿ-īⁿ Gio̍k-lí Hun-īⁿ Tn̂g-liông Hn̂g-khu",
     "name:nan-Latn-tailo": "Tâi-pak Îng-bîn Tsóng-pīnn-īnn Gio̍k-lí Hun-īnn Tn̂g-liông Hn̂g-khu",
     "name:zh": "臺北榮民總醫院玉里分院長良園區",
-    "phone": "+886 3-8801080"
+    "phone": "+886 3 880 1080"
   }
 },
 {
@@ -2346,7 +2347,7 @@
     "healthcare": "hospital",
     "healthcare:speciality": "一般內科;心臟內科;腎臟內科;神經內科;胸腔內科;老年醫學科;血液腫瘤科;家醫科;糖尿病痛風特別門診;身心科;婦產科;兒科;泌尿科;骨科;復健科;眼科;耳鼻喉科;牙科",
     "name": "門諾醫院壽豐分院",
-    "name:en": "Mennonite Christian Hosipital Shoufong Branch",
+    "name:en": "Mennonite Christian Hospital Shoufong Branch",
     "name:nan": "Mn̂g-lo͘ Pēⁿ-īⁿ Siū-hong Hun-īⁿ",
     "name:nan-Hant": "門諾病院壽豐分院",
     "name:nan-Latn-pehoeji": "Mn̂g-lo͘ Pēⁿ-īⁿ Siū-hong Hun-īⁿ",
