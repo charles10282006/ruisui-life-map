@@ -19,6 +19,7 @@
 !/data/geocode_overrides.csv
 !/data/osm_poi.json
 !/data/shelter_overrides.csv
+!/data/fallback/
 
 # #8 通學距離：成品＋更新程式
 !/08_通學距離/

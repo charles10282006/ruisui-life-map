@@ -153,6 +153,8 @@ function log(){
   $('upd').textContent='最近一張影像 '+D.latest+'；頁面資料更新於 '+D.updated;
 }
 chips();cards();log();show(usable.length-1);
+function refit(){map.invalidateSize();map.fitBounds(D.bounds);}
+window.addEventListener('load',refit);setTimeout(refit,300);window.addEventListener('resize',refit);
 </script>
 </body>
 </html>

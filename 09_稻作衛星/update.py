@@ -18,7 +18,7 @@ from requests.adapters import HTTPAdapter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data")
-CACHE = os.path.join(DATA, "ndvi_cache")
+CACHE = os.path.join(DATA, "ndvi_cache_v2")
 OVER = os.path.join(HERE, "overlays")
 os.environ.setdefault("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR")
 os.environ.setdefault("CPL_VSIL_CURL_ALLOWED_EXTENSIONS", ".tif")
@@ -128,7 +128,10 @@ def process_date(date, items, bounds, shape, mask_town):
         scl = read_win(a["scl"]["href"], bounds, shape, "n")
         red = read_win(a["red"]["href"], bounds, shape, "b").astype("float32")
         nir = read_win(a["nir"]["href"], bounds, shape, "b").astype("float32")
-        off = a["red"]["raster:bands"][0].get("offset", -0.1)
+        # 注意：Earth Search 中繼資料標示 offset=-0.1，但實測（2026-11-05，水體 NIR DN 中位數≈225、
+        # 森林紅光≈216）DN 並未含 +1000 偏移，套用會得到 NDVI>1。故不扣偏移（offset=0）。
+        # 若日後 Earth Search 改版，請用水體像元 NIR 的 DN 重新確認。
+        off = 0.0
         sc = a["red"]["raster:bands"][0].get("scale", 0.0001)
         r = red * sc + off; n = nir * sc + off
         v = np.isin(scl, VALID_SCL) & (red > 0) & (nir > 0) & ~ok

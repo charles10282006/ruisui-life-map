@@ -74,3 +74,10 @@ TDX_CLIENT_SECRET=...
 - 看診時段是健保署登錄的固定時段，不含臨時休診。
 - 客運各站時間是公路局登錄的推估值。
 - 各村統計以道路點計，不是人口加權（之後可接 SEGIS 最小統計區人口）。
+
+## 上線與自動更新（GitHub Pages）
+
+- 網站：https://charles10282006.github.io/ruisui-life-map/（`site_src/build_site.py` 把各頁組到 `site/`）
+- 自動更新：`.github/workflows/update.yml`，每天台灣 06:00 更新就醫資料，其餘每 3 小時更新天氣與警戒。GitHub 排程常延遲 10 到 30 分鐘。
+- **颱風或豪雨時**：到 repo 的 Actions 頁 →「更新並發布」→ Run workflow 手動更新警戒。
+- 不在雲端執行、每年手動跑一次再 commit：`build_access.py`（路網車程）、`build_hazard.py`（土石流範圍），以及 #8 通學距離、#9 稻作衛星的 `update.py`。
