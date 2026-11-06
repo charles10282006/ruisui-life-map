@@ -2,7 +2,7 @@
   "version": 0.6,
   "generator": "Overpass API 0.7.62.11 87bfad18",
   "osm3s": {
-    "timestamp_osm_base": "2026-11-06T03:32:46Z",
+    "timestamp_osm_base": "2026-06-01T08:52:28Z",
     "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
   },
   "elements": [
@@ -24,7 +24,6 @@
     "addr:street": "康樂街",
     "alt_name:en": "Yuli Station",
     "name": "玉里",
-    "name:ami": "Posko",
     "name:en": "Yuli",
     "name:hak": "ngiug liˊ",
     "name:hak-Hant": "玉里",
@@ -167,7 +166,6 @@
     "is_in": "Fonglin Township, Hualien County, Taiwan",
     "is_in:zh": "台灣花蓮縣鳳林鎮",
     "name": "南平",
-    "name:ami": "Kiku",
     "name:en": "Nanping",
     "name:hak": "namˇ pinˇ",
     "name:hak-Hant": "南爿",
@@ -236,7 +234,6 @@
     "is_in:zh": "台灣花蓮縣壽豐鄉",
     "maxspeed": "130",
     "name": "豐田",
-    "name:ami": "Telu’",
     "name:en": "Fengtian",
     "name:hak": "fungˊ tienˇ",
     "name:hak-Hant": "豐田",
@@ -311,7 +308,6 @@
     "is_in": "Shoufong Township, Hualien County, Taiwan",
     "is_in:zh": "台灣花蓮縣壽豐鄉",
     "name": "壽豐",
-    "name:ami": "Rinahem",
     "name:en": "Shoufeng",
     "name:hak": "su fungˊ",
     "name:hak-Hant": "壽豐",
@@ -383,7 +379,6 @@
     "addr:village": "志學村",
     "alt_name:nan": "Tsì-ha̍k",
     "name": "志學",
-    "name:ami": "Cihak",
     "name:en": "Zhixue",
     "name:hak": "zii hog",
     "name:hak-Hant": "志學",
@@ -453,7 +448,6 @@
     "is_in:zh": "台灣花蓮縣吉安鄉",
     "maxspeed": "130",
     "name": "吉安",
-    "name:ami": "Yoshino",
     "name:en": "Ji'an",
     "name:hak": "gidˋ onˊ",
     "name:hak-Hant": "吉安",
@@ -522,7 +516,6 @@
     "is_in:zh": "台灣花蓮縣鳳林鎮",
     "maxspeed": "130",
     "name": "萬榮",
-    "name:ami": "Molisaka",
     "name:en": "Wanrong",
     "name:hak": "van iungˇ",
     "name:hak-Hant": "萬榮",
@@ -589,7 +582,6 @@
     "is_in:zh": "台灣花蓮縣瑞穗鄉",
     "maxspeed": "130",
     "name": "富源",
-    "name:ami": "Pa’ilasen",
     "name:en": "Fuyuan",
     "name:hak": "fu ngienˇ",
     "name:hak-Hant": "富源",
@@ -661,7 +653,6 @@
     "addr:street": "四維街",
     "alt_name:nan": "Tsuí-bé",
     "name": "瑞穗",
-    "name:ami": "Kohkoh",
     "name:en": "Ruisui",
     "name:hak": "suiˋ miˊ",
     "name:hak-Hant": "水尾",
@@ -728,7 +719,6 @@
     "is_in": "Yuli Township, Hualien County, Taiwan",
     "is_in:zh": "台灣花蓮縣玉里鎮",
     "name": "三民",
-    "name:ami": "Takay",
     "name:en": "Sanmin",
     "name:hak": "samˊ minˇ",
     "name:hak-Hant": "三民",
@@ -914,7 +904,7 @@
     "official_name": "丁丁藥局吉安店",
     "opening_hours": "09:00-22:45",
     "operator": "諾貝兒寶貝股份有限公司",
-    "phone": "+886 3 853 6772",
+    "phone": "+886-3 853 6772",
     "shop": "chemist",
     "website": "https://www.norbelbaby.com.tw/"
   }
@@ -1022,7 +1012,6 @@
   "lon": 121.4495319,
   "tags": {
     "amenity": "clinic",
-    "healthcare": "clinic",
     "name": "劉明謙診所"
   }
 },
@@ -1193,8 +1182,8 @@
 {
   "type": "node",
   "id": 4221700902,
-  "lat": 23.9896187,
-  "lon": 121.6241302,
+  "lat": 23.9896166,
+  "lon": 121.6240329,
   "tags": {
     "amenity": "clinic",
     "healthcare": "clinic",
@@ -1370,7 +1359,6 @@
     "addr:province": "台灣省",
     "addr:street": "中山路",
     "name": "鳳林",
-    "name:ami": "Cingaroan",
     "name:en": "Fenglin",
     "name:hak": "fung limˇ",
     "name:hak-Hant": "鳳林",
@@ -1551,7 +1539,6 @@
     "alt_name": "花蓮站",
     "alt_name:zh": "花蓮站",
     "name": "花蓮",
-    "name:ami": "Kalingko",
     "name:en": "Hualien",
     "name:hak": "faˊ lienˇ",
     "name:hak-Hant": "花蓮",
@@ -2163,8 +2150,8 @@
   "type": "way",
   "id": 420332037,
   "center": {
-    "lat": 23.7449178,
-    "lon": 121.4512441
+    "lat": 23.7448736,
+    "lon": 121.4511502
   },
   "tags": {
     "addr:city": "花蓮縣",
@@ -2249,7 +2236,7 @@
     "name:nan-Latn-pehoeji": "Tâi-pak Êng-bîn Chóng-pīⁿ-īⁿ Gio̍k-lí Hun-īⁿ Tn̂g-liông Hn̂g-khu",
     "name:nan-Latn-tailo": "Tâi-pak Îng-bîn Tsóng-pīnn-īnn Gio̍k-lí Hun-īnn Tn̂g-liông Hn̂g-khu",
     "name:zh": "臺北榮民總醫院玉里分院長良園區",
-    "phone": "+886 3 880 1080"
+    "phone": "+886 3-8801080"
   }
 },
 {
@@ -2359,7 +2346,7 @@
     "healthcare": "hospital",
     "healthcare:speciality": "一般內科;心臟內科;腎臟內科;神經內科;胸腔內科;老年醫學科;血液腫瘤科;家醫科;糖尿病痛風特別門診;身心科;婦產科;兒科;泌尿科;骨科;復健科;眼科;耳鼻喉科;牙科",
     "name": "門諾醫院壽豐分院",
-    "name:en": "Mennonite Christian Hospital Shoufong Branch",
+    "name:en": "Mennonite Christian Hosipital Shoufong Branch",
     "name:nan": "Mn̂g-lo͘ Pēⁿ-īⁿ Siū-hong Hun-īⁿ",
     "name:nan-Hant": "門諾病院壽豐分院",
     "name:nan-Latn-pehoeji": "Mn̂g-lo͘ Pēⁿ-īⁿ Siū-hong Hun-īⁿ",
